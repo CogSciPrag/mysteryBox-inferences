@@ -7,7 +7,13 @@ from dotenv import load_dotenv
 import pandas as pd
 import time
 from openai_scores import get_openai_model_predictions
+from llama_scores import get_llama_model_predictions
 import openai
+import torch
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer
+)
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -24,6 +30,16 @@ def main(
     model_name_out = model_name.split('/')[-1]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     out_name = f'../results/{study_name}_{experiment_name}_{model_name_out}_{timestamp}.csv'
+
+    # set up llama
+    if "llama" in model_name:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, 
+            device_map='auto', 
+            torch_dtype=torch.float16
+        )
+        model.eval()
 
     # read the study items
     data = pd.read_csv(
@@ -77,11 +93,21 @@ def main(
         pprint(prompt)
 
         # get log prob of answer options
-        predictions = get_openai_model_predictions(
-            prompt, 
-            answer_good="good", 
-            answer_bad="bad",
-        )
+        if "davinci" in model_name:
+            predictions = get_openai_model_predictions(
+                prompt, 
+                answer_good="good", 
+                answer_bad="bad",
+            )
+        else:
+            predictions = get_llama_model_predictions(
+                prompt, 
+                answer_good="good", 
+                answer_bad="bad",
+                model=model,
+                tokenizer=tokenizer,
+                model_name=model_name,
+            )
 
         trial = {
             "Few_shot_items_order": few_shot_shuffled_item_ids

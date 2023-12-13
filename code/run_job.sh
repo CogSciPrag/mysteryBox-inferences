@@ -26,5 +26,5 @@ echo " "
 # activate CUDA
 module load devel/cuda/11.6
 
-python3 -u llama_scores.py \
+python3 -u main.py \
     --model_name="meta-llama/Llama-2-7b-hf"
