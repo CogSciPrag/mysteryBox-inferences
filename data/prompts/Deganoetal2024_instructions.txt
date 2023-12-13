@@ -1,0 +1,28 @@
+In the following, we will ask for your judgments about certain kinds of sentences in English. These sentences will be uttered by two characters, Sam and Mia.
+What does Sam and Mia know about the mystery box? 
+Sam and Mia will be presenting with quadruplets of boxes containing balls of various colours. In each quadruplet, Box 1, Box 2 and Box 3 are always open whereas Box 4 is always closed so that Sam and Mia can only ever see what’s inside the first three boxes. However, they have been taught the rule that Box 4, which we will call the mystery box, always has the same contents as one of the three open boxes. Thanks to this rule, Sam and Mia can make certain inferences about what the mystery box contains and does not contain.
+To illustrate, imagine that Sam is looking at the following quadruplet:
+Box 1 contains a blue ball and a grey ball.
+Box 2 contains a blue ball and a grey ball.
+Box 3 contains a yellow ball and a grey ball.
+Box 4 is the mystery box.
+In this example, Sam knows that every open box contains a grey ball. Similarly, he knows that one open box also contains a yellow ball while the other two also contain a blue one. Thanks to the rule, Sam should be certain that the mystery box contains a grey ball. He should also be certain that this box does not contain a green ball. However, he cannot be certain that the mystery box contains a blue ball, nor can he be certain that it contains a yellow ball.
+
+Imagine now that Mia is looking at the following quadruplet:
+Box 1 contains a blue ball and a yellow ball.
+Box 2 contains two yellow balls.
+Box 3 contains a yellow ball and a blue ball.
+Box 4 is the mystery box.
+In this second example, Mia knows that every open box contains a yellow ball. Similarly, she knows that one open box contains another yellow ball while the other two contain a blue one. Thanks to the rule, Mia should be certain that the mystery box contains a yellow ball. She should also be certain that it does not contain a grey or a green ball. However, she cannot be certain that the mystery contains two yellow balls, nor can she be certain that it contains a blue ball.
+You will see many quadruplets like these ones, each of which will be accompanied by an utterance from either Sam or Mia about what the mystery box contains or does not contain. 
+Your task is to decide if this utterance is right given the information available to the characters and the rule that they have learned about how the mystery box works. You will answer 'Good' if you consider that they got it right; otherwise you will answer 'Bad'.
+
+You will start with a short training to get you familiar with the response procedure. 
+During this training, you will see examples of correct responses.
+### Training
+{few_shot_trials}
+
+### Your turn
+As in the training, Sam and Mia will produce utterances about what the mystery box contains and you will decide whether these utterances are appropriate descriptions of the pictures you see.
+
+{critical_trial}
