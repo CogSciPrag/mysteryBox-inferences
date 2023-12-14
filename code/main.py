@@ -63,7 +63,7 @@ def main(
     critical_trials = data[data["Item_status"] == "Test"].reset_index(drop=True)
 
     # iterate over critical trials
-    for i, row in critical_trials[:1].iterrows():
+    for i, row in critical_trials.iterrows():
         # create few-shot example by shuffling few shot trials
         few_shot_shuffled = few_shot_trials.sample(frac=1).reset_index(drop=True)
         few_shot_shuffled_item_ids = "|".join(
@@ -119,8 +119,8 @@ def main(
         # continuous saving
         # combine the raw trial information with the predicted log probs
         results_df = pd.concat(
-            [critical_trials.iloc[i, :].to_frame().T, 
-            pd.DataFrame(output, index=[0])],
+            [row.to_frame().T, 
+            pd.DataFrame(output, index=[i])],
             axis=1
         )
         pprint(results_df)
@@ -142,8 +142,6 @@ def main(
         # sleep in order to avoid request timeouts for OpenAI API
         if "davinci" in model_name:
             time.sleep(10)
-        
-        results_df.to_csv(out_name, index = False)
     
 
     
