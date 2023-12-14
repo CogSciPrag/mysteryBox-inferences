@@ -1,0 +1,14 @@
+Currently {character} sees the following quadruplet of boxes:
+
+Box 1 contains {context_box1}.
+Box 2 contains {context_box2}.
+Box 3 contains {context_box1}.
+Box 4 is the mystery box.
+
+{character} says: {sentence}
+
+How would you judge {character}'s utterance in this situation? Here are your answer options:
+{answer_option1}
+{answer_option2}
+
+Your answer: I would judge this utterance as 
