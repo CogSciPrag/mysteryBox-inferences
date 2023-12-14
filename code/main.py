@@ -141,10 +141,6 @@ def main(
         # sleep in order to avoid request timeouts for OpenAI API
         if "davinci" in model_name:
             time.sleep(10)
-        
-    
-
-    
     
 
 if __name__ == "__main__":

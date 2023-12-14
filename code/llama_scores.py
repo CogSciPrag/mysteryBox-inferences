@@ -71,11 +71,15 @@ def getLogProbContinuation(
         dim=-1, 
         index=input_ids_probs
     ).flatten()
+    print(len(conditionalLogProbs))
+    print("input_ids_prompt  shape", input_ids_prompt.shape)
+    print("input ids continuation without sos :" , input_ids_continuation.shape[-1]-1)
     # slice output to only get scores of the continuation, not the context
     continuationConditionalLogProbs = conditionalLogProbs[
-        input_ids_prompt.shape[-1]:
+        -(input_ids_continuation.shape[-1]-1):
     ]
     print("Shape of retrieved log probs", continuationConditionalLogProbs.shape)
+    print(continuationConditionalLogProbs)
     # compute continunation log prob
     sentLogProb = torch.sum(continuationConditionalLogProbs).item()
     meanLogProb = torch.mean(continuationConditionalLogProbs).item()
