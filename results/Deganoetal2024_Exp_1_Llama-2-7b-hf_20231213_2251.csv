@@ -1,3 +1,0 @@
-Study,Experiment,Item_nr,Item_status,Sentence_type,Condition,Character,Sentence,Box_schema,Content_Box1,Content_Box2,Content_Box3,Color_Ball_A,Color_Ball_B,Color_Ball_C,Color_Ball_D,Answer_option1,Answer_option2,Few_shot_items_order,Mean_logprob_answer_good,Mean_logprob_answer_bad,Sentence_logprob_answer_good,Sentence_logprob_answer_bad
-Deganoetal_2024,Exp_1,56,Test,Control_3,Bad,Sam,`The mystery box contains a yellow ball and a grey ball.',AB-CD-C,a green ball,a yellow ball and a grey ball,a green ball and a blue ball,yellow,grey,green,blue,Bad,Good,,,,,
-,,,,,,,,,,,,,,,,,,2|4|7|1|3|5|8|6,,,0.0,0.0
