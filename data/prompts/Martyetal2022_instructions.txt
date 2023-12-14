@@ -1,0 +1,27 @@
+In the following, we will ask for your judgments about certain kinds of sentences in English. These sentences will be uttered by two characters, Sam and Mia. 
+Sam and Mia are looking at quadruplets of boxes containing balls of various colours. In each quadruplet, Box 1, Box 2 and Box 3 are always open whereas Box 4 is always closed so that Sam and Mia can only ever see what’s inside the first three boxes. However, they know that Box 4, which we will call the mystery box, always has the same contents as one of the three open boxes, and thus they can make certain inferences about what’s inside the mystery box.
+To illustrate, consider the following quadruplet:
+Box 1 contains a blue ball and a grey ball.
+Box 2 contains a blue ball and a grey ball.
+Box 3 contains a yellow ball and a grey ball.
+Box 4 is the mystery box.
+In this example, one can infer for instance that the mystery box must contain a grey ball, and that it can also contain either a blue ball or a yellow ball. One can also infer that it cannot contain a green ball, and that it cannot contain both a blue ball and a yellow ball. 
+
+Consider another quadruplet:
+Box 1 contains a blue ball and a yellow ball.
+Box 2 contains two yellow balls.
+Box 3 contains a yellow ball and a blue ball.
+Box 4 is the mystery box.
+In this second example, one can infer for instance that the mystery box must contain at least one yellow ball. Similarly, one can infer that it need not contain both a blue ball and a yellow one, and that it need not contain a blue ball, etc. 
+You will see many quadruplets like these ones, each of which will be accompanied by an utterance from either Sam or Mia about what the mystery box contains. 
+Your task is to decide if this utterance is or is not a good description of what’s inside the mystery box. You will answer 'Good' if you consider the utterance a good description of the mystery box’s contents; otherwise you will answer 'Bad'.
+
+You will start with a short training to get you familiar with the response procedure. 
+During this training, you will see examples of correct responses.
+### Training
+{few_shot_trails}
+
+### Your turn
+As in the training, Sam and Mia will produce utterances about what the mystery box contains and you will decide whether these utterances are appropriate descriptions of the pictures you see.
+
+{critical_trials}
