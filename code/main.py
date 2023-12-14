@@ -108,7 +108,6 @@ def main(
                 tokenizer=tokenizer,
                 model_name=model_name,
             )
-
         trial = {
             "Few_shot_items_order": few_shot_shuffled_item_ids
         }
@@ -123,7 +122,7 @@ def main(
             pd.DataFrame(output, index=[i])],
             axis=1
         )
-        pprint(results_df)
+        # pprint(results_df)
 
         if os.path.exists(out_name):
             results_df.to_csv(
@@ -142,9 +141,6 @@ def main(
         # sleep in order to avoid request timeouts for OpenAI API
         if "davinci" in model_name:
             time.sleep(10)
-    
-
-    
     
 
 if __name__ == "__main__":
