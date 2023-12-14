@@ -24,4 +24,4 @@ During this training, you will see examples of correct responses.
 ### Your turn
 As in the training, Sam and Mia will produce utterances about what the mystery box contains and you will decide whether these utterances are appropriate descriptions of the pictures you see.
 
-{critical_trials}
+{critical_trial}
