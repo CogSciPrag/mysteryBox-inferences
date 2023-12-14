@@ -5,8 +5,6 @@ import os
 import argparse
 from tqdm import tqdm
 from pprint import pprint
-# import make_material
-from make_material import sample_vignette
 import torch
 from transformers import (
     AutoModelForCausalLM, 

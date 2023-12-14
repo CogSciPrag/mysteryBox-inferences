@@ -5,7 +5,6 @@ def format_item(r, item_template):
     Helper function for formatting the single item information into
     intructions template. Return text up to the trigger word to be scored.
     """
-    print("R in format item ", r)
     answer_options = [r["Answer_option1"], r["Answer_option2"]]
     random.shuffle(answer_options)
     item_text = item_template.format(
