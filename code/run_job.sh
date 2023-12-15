@@ -2,8 +2,8 @@
 #SBATCH --partition=single
 #SBATCH --ntasks=1
 #SBATCH --time=10:00:00
-#SBATCH --mem=20gb
-#SBATCH --gres=gpu:A40:1
+#SBATCH --mem=237gb
+#SBATCH --gres=gpu:A100:2
 
 echo 'Running simulation'
 
@@ -27,16 +27,16 @@ echo " "
 module load devel/cuda/11.6
 
 # iterate over models
-models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-7b-chat-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-13b-chat-hf")
+models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
 # iterate over studies
-studies=("Deganoetal2024" "Martyetal2023" "Martyetal2022")
+studies=("Martyetal2022")
 # iterate over experiments
 expts2024=("Exp_2" "Exp_3")
 expts2023=("Exp_1" "Exp_2")
 expts2022=("Exp_4" "Exp_5" "Exp_6")
 
 for i in ${!models[*]}; do
-    echo "model: ${model[$i]}"
+    echo "model: ${models[$i]}"
     for j in ${!studies[*]}; do
         echo "study: ${studies[$j]}"
         case "${studies[$j]}" in 
