@@ -47,11 +47,12 @@ def getLogProbContinuation(
         (input_ids_prompt, input_ids_continuation[:, 1:]), 
         -1
     ).to("cuda:1") # put input on the first device
-    print("input ids shape ", input_ids.shape)
+    print("input ids shape ", input_ids.shape, input_ids.dtype)
     # pass through model
-    outputs = model(
-        input_ids,
-    )
+    with torch.no_grad():
+        outputs = model(
+            input_ids,
+        )
     # transform logits to probabilities
     print("shape of logits ", outputs.logits.shape)
     # remove the EOS logit which we aren't interested in

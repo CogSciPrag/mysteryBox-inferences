@@ -40,6 +40,7 @@ def main(
             torch_dtype=torch.float16
         )
         model.eval()
+        print("----- model dtype ------", model.dtype)
 
     # read the study items
     data = pd.read_csv(
@@ -77,20 +78,20 @@ def main(
         ]
         # join to a string
         few_shot_items_formatted = "\n\n".join(few_shot_items)
-        print("Few shot formatted example items")
-        pprint(few_shot_items_formatted)
+        #print("Few shot formatted example items")
+        #pprint(few_shot_items_formatted)
 
         # format critical trial
         trial_formatted = format_item(row, item_template)
-        print("Formatted critical trial")
-        pprint(trial_formatted)
+        #print("Formatted critical trial")
+        #pprint(trial_formatted)
         # construct overall prompt
         prompt = instructions.format(
             few_shot_trials=few_shot_items_formatted,
             critical_trial=trial_formatted,
         )
-        print("Overall prompt ")
-        pprint(prompt)
+        # print("Overall prompt ")
+        #pprint(prompt)
 
         # get log prob of answer options
         if "davinci" in model_name:
