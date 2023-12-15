@@ -41,12 +41,12 @@ def getLogProbContinuation(
         return_tensors="pt",
     ).input_ids
     #print("input_ids prompt ", input_ids_prompt)
-    print("input ids continuation ", input_ids_continuation.shape)
+    print("input ids continuation ", input_ids_continuation.shape, input_ids_continuation)
     # cut off the first token of the continuation, as it is SOS
     input_ids = torch.cat(
         (input_ids_prompt, input_ids_continuation[:, 1:]), 
         -1
-    ).to("cuda:0") # put input on the first device
+    ).to("cuda:1") # put input on the first device
     print("input ids shape ", input_ids.shape)
     # pass through model
     outputs = model(
