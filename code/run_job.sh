@@ -37,30 +37,30 @@ expts2022=("Exp_4" "Exp_5" "Exp_6")
 
 for i in ${!models[*]}; do
     echo "model: ${model[$i]}"
-    for j in ${!studies[$j]}; do
+    for j in ${!studies[*]}; do
         echo "study: ${studies[$j]}"
         case "${studies[$j]}" in 
             "Deganoetal2024")
-                for k in ${!expts2024[$k]}; do
+                for k in ${!expts2024[*]}; do
                 python3 -u main.py \
                     --model_name="${models[$i]}" \
-                    --study_name="${studies[]$j}" \
+                    --study_name="${studies[$j]}" \
                     --experiment_name="${expts2024[$k]}"
                 done
             ;;
             "Martyetal2023")
-                for k in ${!expts2023[$k]}; do
+                for k in ${!expts2023[*]}; do
                 python3 -u main.py \
                     --model_name="${models[$i]}" \
-                    --study_name="${studies[]$j}" \
+                    --study_name="${studies[$j]}" \
                     --experiment_name="${expts2023[$k]}"
                 done
             ;;
             "Martyetal2022")
-                for k in ${!expts2022[$k]}; do
+                for k in ${!expts2022[*]}; do
                 python3 -u main.py \
                     --model_name="${models[$i]}" \
-                    --study_name="${studies[]$j}" \
+                    --study_name="${studies[$j]}" \
                     --experiment_name="${expts2022[$k]}"
                 done
         esac

@@ -154,13 +154,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name",
         type=str,
-        default="Exp_1",
+        default="Exp_4",
         help="Number of experiment for filtering materials"
     )
     parser.add_argument(
         "--study_name",
         type=str,
-        default="Deganoetal2024",
+        default="Martyetal2022",
         help="Name of study for accessing correct materials"
     )
 
