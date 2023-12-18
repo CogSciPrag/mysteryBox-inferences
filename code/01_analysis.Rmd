@@ -1,0 +1,195 @@
+---
+title: "Myster box inferences descriptive stats"
+author: "PT"
+date: "2023-12-16"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(tidyboot)
+library(cspplot)
+```
+
+# Overview
+
+We explore the performance of text-davinci-003 and all Llama-2 models (both base and chat) on experiments 1-3 from Degano et al 2024, experiments 1-2 from Marty et al 2023 and experiments 4-6 from Marty et al 2022. All practice trials are used as a few-shot prompt (i.e. correct solutions were presented).
+
+The results were retrieved by retrieving the log probability of the labels "good" / "bad" following the prompt. The selected answer is identified by selecting the max probability. For simplicity, the prompts are linked here:
+
+* [Degano et al 2024](https://github.com/CogSciPrag/mysteryBox-inferences/blob/main/data/prompts/Deganoetal2024_instructions.txt)
+* [Marty et al 2023](https://github.com/CogSciPrag/mysteryBox-inferences/blob/main/data/prompts/Martyetal2023_instructions.txt)
+* [Marty et al 2022](https://github.com/CogSciPrag/mysteryBox-inferences/blob/main/data/prompts/Martyetal2022_instructions.txt)
+
+```{r data, warning=FALSE, message=FALSE, echo=FALSE}
+results_paths_degano2024 <- list.files(path = "../results/01_raw/", pattern = "Deganoetal2024*",
+           full.names = TRUE) 
+results_paths_marty2023 <- list.files(path = "../results/01_raw/", pattern = "Martyetal2023_*",
+           full.names = TRUE) 
+results_paths_marty2022 <- list.files(path = "../results/01_raw/", pattern = "Martyetal2022_*",
+           full.names = TRUE) 
+# read files and save model name
+read_and_save_model <- function(p) {
+  d <- read_csv(p)
+  d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,5])
+  return(d)
+}
+
+degano2024 <- bind_rows(map(results_paths_degano2024, read_and_save_model))
+marty2023 <- bind_rows(map(results_paths_marty2023, read_and_save_model))
+marty2022 <- bind_rows(map(results_paths_marty2022, read_and_save_model))
+```
+
+# Analysis
+
+Below we analyse the selected response. We apply two analyses: first, we compute the proportion of responses predicting that the trigger sentence is "good" by checking whether the "good" response was assigned the higher LLH / probability (trial-level).
+Furthermore, we compute the probability assigned to each response by applying softmax (alpha = 1) to LLH's from each trial and then averaging over the response probabilities by condition.
+
+```{r preprocess}
+process_response <- function(d) {
+d <- d %>% 
+  rowwise() %>%
+  mutate(
+    chosen_response_llh = max(Mean_logprob_answer_good, Mean_logprob_answer_bad),
+    chosen_response = ifelse(chosen_response_llh == Mean_logprob_answer_good, "Mean_logprob_answer_good", "Mean_logprob_answer_bad"),
+    chosen_response = str_split(chosen_response, "_", simplify=T)[,4],
+    norm_factor = sum(exp(Mean_logprob_answer_good), exp(Mean_logprob_answer_bad)),
+    prob_good = exp(Mean_logprob_answer_good) / norm_factor,
+    prob_bad = exp(Mean_logprob_answer_bad) / norm_factor
+  )
+  return(d)
+}
+```
+
+We apply these analyses by-study and then group the respective stats by conditions of each respective study.
+```{r}
+degano2024_processed <- process_response(degano2024)
+marty2023_processed <- process_response(marty2023)
+marty2022_processed <- process_response(marty2022)
+
+degano2024_acc_rate <- degano2024_processed %>% 
+  mutate(
+    is_good = as.numeric(chosen_response == "good")
+  ) %>% 
+  group_by(model, Condition) %>% 
+  tidyboot_mean(column = is_good)
+degano2024_acc_rate
+
+marty2023_summary <- marty2023_processed %>% 
+  mutate(
+    is_good = as.numeric(chosen_response == "good")
+  ) %>% 
+  group_by(model, Quantifier_type, Condition) %>% 
+  tidyboot_mean(column = is_good)
+marty2023_summary
+
+marty2022_summary <- marty2022_processed %>%
+  mutate(
+    is_good = as.numeric(chosen_response == "good")
+  ) %>% 
+  group_by(model, Negation, Polarity, Inference_type, Condition) %>% 
+  tidyboot_mean(column = is_good)
+marty2022_summary
+```
+
+The processed data is saved such that the probabilities of each response option as well as the selected response are included on top of the raw materials csvs (**columns prob_good, prob_bad, chosen_response**), along with the information which model was used to produce the results.
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+#degano2024_processed %>%
+#  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
+#  write_csv("../results/02_tidy/Deganoetal2024_results_tidy.csv")
+#marty2023_processed %>%
+#  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
+#  write_csv("../results/02_tidy/Martyetal2023_results_tidy.csv")
+#marty2022_processed %>%
+#  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
+#  write_csv("../results/02_tidy/cMartyetal2022_results_tidy.csv")
+```
+
+
+# Plots
+Below, we plot the mean acceptance rate (i.e., the mean proportion of judgments that a trigger sentence is good) by-model, by experiment and by-condition. 
+
+Plot for Degano et al 2024:
+```{r}
+degano2024_acc_rate %>% 
+  ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col() +
+  geom_errorbar(width = 0.1) +
+  facet_wrap(~model) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=20)) 
+```
+
+Marty et al 2023: 
+```{r}
+marty2023_summary %>% 
+  ggplot(., aes(x = Condition, y = mean, fill = Quantifier_type, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(~model) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=20)) 
+```
+
+Marty et al 2022: 
+```{r, fig.height=10}
+marty2022_summary %>% 
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=20)) 
+```
+
+Now the same plots are replicated with the average probability assigned to the "acceptance" response.
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+degano2024_prob <- degano2024_processed %>% 
+  group_by(model, Condition) %>% 
+  tidyboot_mean(column = prob_good)
+degano2024_prob
+
+marty2023_prob <- marty2023_processed %>% 
+  group_by(model, Quantifier_type, Condition) %>% 
+  tidyboot_mean(column = prob_good)
+marty2023_prob
+
+marty2022_prob <- marty2022_processed %>%
+  group_by(model, Negation, Polarity, Inference_type, Condition) %>% 
+  tidyboot_mean(column = prob_good)
+marty2022_prob
+```
+
+```{r, warning=FALSE}
+degano2024_prob %>% 
+  ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col() +
+  geom_errorbar(width = 0.1) +
+  facet_wrap(~model) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=20)) 
+```
+```{r, warning=FALSE}
+marty2023_prob %>% 
+  ggplot(., aes(x = Condition, y = mean, fill = Quantifier_type, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(~model) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=20)) 
+```
+```{r, warning=FALSE, fig.height=10}
+marty2022_prob %>% 
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=20)) 
+```
