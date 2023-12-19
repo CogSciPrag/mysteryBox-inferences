@@ -31,22 +31,23 @@ def getLogProbContinuation(
     """
 
     initialSequence = preface + initialSequence
+    prompt = preface + initialSequence + continuation
     # tokenize separately, so as to know the shape of the continuation
     input_ids_prompt = tokenizer(
-        initialSequence, 
+        initialSequence.strip(), 
         return_tensors="pt",
     ).input_ids
-    input_ids_continuation = tokenizer(
-        continuation,
+    input_ids = tokenizer(
+        prompt,
         return_tensors="pt",
-    ).input_ids
-    #print("input_ids prompt ", input_ids_prompt)
-    print("input ids continuation ", input_ids_continuation.shape, input_ids_continuation)
+    ).input_ids.to("cuda:1")
+    print("input_ids prompt ", input_ids_prompt.shape)
+    # print("input ids continuation ", input_ids_continuation.shape, input_ids_continuation)
     # cut off the first token of the continuation, as it is SOS
-    input_ids = torch.cat(
-        (input_ids_prompt, input_ids_continuation[:, 1:]), 
-        -1
-    ).to("cuda:1") # put input on the first device
+    # input_ids = torch.cat(
+    #     (input_ids_prompt, input_ids_continuation[:, 1:]), 
+    #     -1
+    # ).to("cuda:1") # put input on the first device
     print("input ids shape ", input_ids.shape, input_ids.dtype)
     # pass through model
     with torch.no_grad():
@@ -74,10 +75,10 @@ def getLogProbContinuation(
     ).flatten()
     print(len(conditionalLogProbs))
     print("input_ids_prompt  shape", input_ids_prompt.shape)
-    print("input ids continuation without sos :" , input_ids_continuation.shape[-1]-1)
+    # print("input ids continuation without sos :" , input_ids_continuation.shape[-1]-1)
     # slice output to only get scores of the continuation, not the context
     continuationConditionalLogProbs = conditionalLogProbs[
-        -(input_ids_continuation.shape[-1]-1):
+        (input_ids_prompt.shape[-1]-1):
     ]
     print("Shape of retrieved log probs", continuationConditionalLogProbs.shape)
     print(continuationConditionalLogProbs)
@@ -85,6 +86,7 @@ def getLogProbContinuation(
     sentLogProb = torch.sum(continuationConditionalLogProbs).item()
     meanLogProb = torch.mean(continuationConditionalLogProbs).item()
     print("sent log prob ", sentLogProb)
+    print("mean log prob ", meanLogProb)
 
     return sentLogProb, meanLogProb
             
