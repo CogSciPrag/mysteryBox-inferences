@@ -40,7 +40,7 @@ def getLogProbContinuation(
     input_ids = tokenizer(
         prompt,
         return_tensors="pt",
-    ).input_ids.to("cuda:1")
+    ).input_ids.to("cuda:0")
     print("input_ids prompt ", input_ids_prompt.shape)
     # print("input ids continuation ", input_ids_continuation.shape, input_ids_continuation)
     # cut off the first token of the continuation, as it is SOS
