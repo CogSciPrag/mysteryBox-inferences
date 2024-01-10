@@ -27,9 +27,9 @@ echo " "
 module load devel/cuda/11.6
 
 # iterate over models
-models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
+models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-7b-chat-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
 # iterate over studies
-studies=("Martyetal2022")
+studies=("Martyetal2022" "Martyetal2023")
 # iterate over experiments
 expts2024=("Exp_2" "Exp_3")
 expts2023=("Exp_1" "Exp_2")

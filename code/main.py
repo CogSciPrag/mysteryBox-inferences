@@ -29,7 +29,7 @@ def main(
     """
     model_name_out = model_name.split('/')[-1]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-    out_name = f'../results/{study_name}_{experiment_name}_{model_name_out}_{timestamp}.csv'
+    out_name = f'../results/zeroShot_{study_name}_{experiment_name}_{model_name_out}_{timestamp}.csv'
 
     # set up llama
     if "llama" in model_name:
@@ -87,7 +87,7 @@ def main(
         #pprint(trial_formatted)
         # construct overall prompt
         prompt = instructions.format(
-            few_shot_trials=few_shot_items_formatted,
+            #few_shot_trials=few_shot_items_formatted,
             critical_trial=trial_formatted,
         )
         # print("Overall prompt ")
