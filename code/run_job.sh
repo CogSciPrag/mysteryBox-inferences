@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --partition=single
 #SBATCH --ntasks=1
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --mem=80gb
-#SBATCH --gres=gpu:A40
+#SBATCH --gres=gpu:A40:1
 
 echo 'Running simulation'
 
@@ -26,10 +26,9 @@ echo " "
 # activate CUDA
 module load devel/cuda/11.6
 
-# iterate over models
-models=("meta-llama/Llama-2-7b-chat-hf") # "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-7b-hf") #"meta-llama/Llama-2-13b-chat-hf"
-# iterate over studies
+# iterate over studies and models
 studies=("Martyetal2023" "Martyetal2022")
+models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-7b-chat-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
 # iterate over experiments
 expts2024=("Exp_1" "Exp_2" "Exp_3")
 expts2023=("Exp_1" "Exp_2")
