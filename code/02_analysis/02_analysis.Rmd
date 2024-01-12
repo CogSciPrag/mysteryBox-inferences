@@ -1,0 +1,42 @@
+---
+title: 'Mystery boxes: LLM inferences, humans, and theories'
+author: "PT"
+date: "2024-01-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(tidyboot)
+library(cspplot)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+degano <- read_csv("../../results/03_tidy/deganoetal2024_tidy.csv")
+m2022 <- read_csv("../../results/03_tidy/martyetal2023_tidy.csv")
+m2023 <- read_csv("../../results/03_tidy/martyetal2022_tidy.csv")
+```
+
+# Creating a matrix with key results
+
+
+Below, the by-condition accuracies are computed and collected in a dataframe. This is done by-study.
+TODO: The entrypoint for adding more computations would be to extend the mutate() call to include other comparisons.
+
+```{r contrasts}
+degano_control_accuracy <- degano %>%
+  filter((Condition == "Bad") | (Condition == "Good")) %>%
+  mutate(is_correct = tolower(Condition) == chosen_response) %>%
+  group_by(Study, model, Sentence_type) %>%
+  summarize(control_accuracy = mean(is_correct))
+
+# tensor of model x condition good-responose-proportions
+# compute condition-level accepance rates (i.e., good choice proportion)
+degano_contrasts <- degano %>%
+  group_by(Condition) 
+  
+# TODO write function which can be extended and will output the summary tibble
+analyze_results <- function(df, grouping_variables){
+  # TODO find out the variable situation
+}
+```

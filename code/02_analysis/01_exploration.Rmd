@@ -121,7 +121,73 @@ The processed data is saved such that the probabilities of each response option 
 #  write_csv("../results/02_tidy/Martyetal2022_results_tidy.csv")
 ```
 
+# Exploratory accuracy analysis
 
+To determine which linking function (WTA or item-level probability averaging) is better, we explore the accuracy on the control conditions (bad and good in all experiments), by single experiment. For exploration, we also check the control performance by-condition, where relevant.
+
+```{r}
+check_controls <- function(d) {
+  d_controls <- d %>%
+  filter((Condition == "Bad") | (Condition == "Good")) %>%
+  mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
+         is_correct = ground_truth == chosen_response,
+         option_probability = ifelse(Condition == "Good", prob_good, prob_bad))
+  
+d_summary <- d_controls %>%
+  group_by(Study, Experiment, model) %>%
+  summarize(wta_accuracy = mean(is_correct),
+            item_prob_accuracy = mean(option_probability)) %>%
+  mutate(better_metric = ifelse(wta_accuracy > item_prob_accuracy, "wta_accuracy", "item_prob_accuracy"))
+return(d_summary)
+}
+
+check_controls(degano2024_processed) #%>% count(better_metric)
+check_controls(marty2023_processed)  #%>% count(better_metric)
+check_controls(marty2022_processed) #%>% count(better_metric)
+```
+
+Based on the analyses above, the following turns out: For all studies, across experiments, WTA is a better linking function in terms of control accuracy by-study by-experiment. I.e., under WTA, average control accuracies of experiments were higher. We select top 3 models for each experiment based on WTA. In particular, we only take models whose performance is above chance at least by 0.05 (i.e., at least 0.56).
+
+* Degano et al 2024: 
+  * E1: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf
+  * E2: top 3 models: Llama-2-7b-hf, Llama-2-13b-hf, 	Llama-2-70b-hf
+  * E3: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf
+* Marty et al 2023: 
+  * E1: top 3 models: text-davinci-003, Llama-2-70b-hf,	Llama-2-7b-chat-hf or Llama-2-13b-hf (tie)
+  * E2: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf
+* Marty et al 2022: 
+  * E4: top 3 models: text-davinci-003, Llama-2-70b-hf
+  * E5: top 3 models: text-davinci-003, Llama-2-70b-hf
+  * E6: top 3 models: text-davinci-003, Llama-2-70b-hf,	Llama-2-7b-chat-hf
+  
+Therefore, we subset the data to these results only. The tidy data frames can be found under results/03_tidy. The also only contain WTA predictions now. 
+```{r, echo=FALSE}
+degano_filtered <- degano2024_processed %>%
+  filter(((Experiment == "Exp_1") & (model == "text-davinci-003")) | 
+           ((model == "Llama-2-70b-hf")) |
+           ((model == "Llama-2-13b-hf")) |
+           ((Experiment == "Exp_2") & (model == "Llama-2-7b-hf")) | 
+           ((Experiment == "Exp_3") & (model == "text-davinci-003")) 
+           ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
+#degano_filtered %>% write_csv("../results/03_tidy/deganoetal2024_tidy.csv")
+
+marty2023_filtered <- marty2023_processed %>%
+  filter(
+           ((model == "Llama-2-70b-hf")) |
+           ((model == "Llama-2-13b-hf")) |
+           ((model == "text-davinci-003"))
+           ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
+
+#marty2023_filtered %>% write_csv("../results/03_tidy/martyetal2023_tidy.csv")
+
+marty2022_filtered <- marty2022_processed %>%
+  filter(((Experiment == "Exp_6") & (model == "Llama-2-7b-chat-hf")) | 
+           ((model == "Llama-2-70b-hf")) |
+           ((model == "text-davinci-003"))  
+           ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
+#marty2022_filtered %>% write_csv("../results/03_tidy/martyetal2022_tidy.csv")
+```
+  
 # Plots
 Below, we plot the mean acceptance rate (i.e., the mean proportion of judgments that a trigger sentence is good) by-model, by experiment and by-condition. 
 
@@ -261,29 +327,6 @@ e6_prob <- marty2022_prob %>%
 
 # bind the plots together
 gridExtra::grid.arrange(e4_prob, e5_prob, e6_prob)
-```
-# Exploratory accuracy analysis
-
-To determine which linking function (WTA or item-level probability averaging) is better, we explore the accuracy on the control conditions (bad and good in most experiments).
-```{r}
-check_controls <- function(d, study) {
-  d_controls <- d %>%
-  filter((Condition == "Bad") | (Condition == "Good")) %>%
-  mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
-         is_correct = ground_truth == chosen_response,
-         option_probability = ifelse(Condition == "Good", prob_good, prob_bad),
-         study = study)
-  
-d_summary <- d_controls %>%
-  group_by(study, model) %>%
-  summarize(wta_accuracy = mean(is_correct),
-            item_prob_accuracy = mean(option_probability)) 
-return(d_summary)
-}
-
-check_controls(degano2024_processed, "degano2024")
-check_controls(marty2023_processed, "marty2023")
-check_controls(marty2022_processed, "marty2022")
 ```
 
 # Explore 0-shot results
