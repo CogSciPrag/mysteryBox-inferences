@@ -36,7 +36,16 @@ read_and_save_model <- function(p) {
   d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,5])
   return(d)
 }
-
+read_and_save_model_zs <- function(p) {
+  d <- read_csv(p)
+  d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,6])
+  return(d)
+}
+read_and_save_model_q <- function(p) {
+  d <- read_csv(p)
+  d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,7])
+  return(d)
+}
 degano2024 <- bind_rows(map(results_paths_degano2024, read_and_save_model))
 marty2023 <- bind_rows(map(results_paths_marty2023, read_and_save_model))
 marty2022 <- bind_rows(map(results_paths_marty2022, read_and_save_model))
@@ -253,68 +262,299 @@ e6_prob <- marty2022_prob %>%
 # bind the plots together
 gridExtra::grid.arrange(e4_prob, e5_prob, e6_prob)
 ```
+# Exploratory accuracy analysis
+
+To determine which linking function (WTA or item-level probability averaging) is better, we explore the accuracy on the control conditions (bad and good in most experiments).
+```{r}
+check_controls <- function(d, study) {
+  d_controls <- d %>%
+  filter((Condition == "Bad") | (Condition == "Good")) %>%
+  mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
+         is_correct = ground_truth == chosen_response,
+         option_probability = ifelse(Condition == "Good", prob_good, prob_bad),
+         study = study)
+  
+d_summary <- d_controls %>%
+  group_by(study, model) %>%
+  summarize(wta_accuracy = mean(is_correct),
+            item_prob_accuracy = mean(option_probability)) 
+return(d_summary)
+}
+
+check_controls(degano2024_processed, "degano2024")
+check_controls(marty2023_processed, "marty2023")
+check_controls(marty2022_processed, "marty2022")
+```
 
 # Explore 0-shot results
 
-A quick exploration of zero-shot results for the Degano et al 2024 study was also conducted (with Llama 2 13b chat). The WTA results and trial-level probability results are shown below.
+An exploration of zero-shot results was also conducted (with Llama 2 7b base, 7b chat, 13b base and 13b chat). The WTA results and trial-level probability results are shown below.
 
-```{r}
-zero_shot <- c("../results/00_exploration/zeroShot_Deganoetal2024_Exp_1_Llama-2-13b-chat-hf_20231222_0752.csv", "../results/00_exploration/zeroShot_Deganoetal2024_Exp_2_Llama-2-13b-chat-hf_20231222_0752.csv", "../results/00_exploration/zeroShot_Deganoetal2024_Exp_3_Llama-2-13b-chat-hf_20231222_0753.csv")
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+zero_shot_degano2024 <- list.files(path = "../results/00_exploration/", pattern = "Deganoetal2024_*",
+           full.names = TRUE)
+zero_shot_marty2023 <- list.files(path = "../results/00_exploration/", pattern = "Martyetal2023_*",
+           full.names = TRUE)
+zero_shot_marty2022 <- list.files(path = "../results/00_exploration/", pattern = "Martyetal2022_*",
+           full.names = TRUE)
 
-zero_shot_degano <- bind_rows(map(zero_shot, read_and_save_model))
-zero_shot_processed <- process_response(zero_shot_degano)
+zero_shot_degano <- bind_rows(map(zero_shot_degano2024, read_and_save_model_zs))
+zero_shot_marty2023 <- bind_rows(map(zero_shot_marty2023, read_and_save_model_zs))
+zero_shot_marty2022 <- bind_rows(map(zero_shot_marty2022, read_and_save_model_zs))
 
-zero_shot_acc_rate <- zero_shot_processed %>% 
+zero_shot_degano_processed <- process_response(zero_shot_degano)
+zero_shot_marty2023_processed <- process_response(zero_shot_marty2023)
+zero_shot_marty2022_processed <- process_response(zero_shot_marty2022)
+
+
+# process (WTA and item level probability)
+zero_shot_degano_acc_rate <- zero_shot_degano_processed %>% 
   mutate(
     is_good = as.numeric(chosen_response == "good")
   ) %>% 
-  group_by(model, Experiment, Condition) %>% 
+  group_by(model, Condition, Experiment) %>% 
   tidyboot_mean(column = is_good)
 
-zero_shot_prob <- zero_shot_processed %>% 
+zero_shot_marty2023_acc_rate <- zero_shot_marty2023_processed %>% 
+  mutate(
+    is_good = as.numeric(chosen_response == "good")
+  ) %>% 
+  group_by(model, Quantifier_type, Condition, Experiment) %>% 
+  tidyboot_mean(column = is_good)
+
+zero_shot_marty2022_acc_rate <- zero_shot_marty2022_processed %>%
+  mutate(
+    is_good = as.numeric(chosen_response == "good")
+  ) %>% 
+  group_by(model, Negation, Polarity, Inference_type, Condition, Experiment) %>% 
+  tidyboot_mean(column = is_good)
+
+zero_shot_degano_prob <- zero_shot_degano_processed %>% 
   group_by(model, Experiment, Condition) %>% 
   tidyboot_mean(column = prob_good)
-zero_shot_prob
+
+zero_shot_marty2023_prob <- zero_shot_marty2023_processed %>% 
+  group_by(model, Quantifier_type, Condition, Experiment) %>% 
+  tidyboot_mean(column = prob_good)
+
+zero_shot_marty2022_prob <- zero_shot_marty2022_processed %>%
+  group_by(model, Negation, Polarity, Inference_type, Condition, Experiment) %>% 
+  tidyboot_mean(column = prob_good)
+
 ```
 
-Put together with few-shot results:
+For Degano et al 2024, as an example for direct comparison, put together zero-shot with few-shot results:
 ```{r}
-zero_shot_acc_rate_prompts <- zero_shot_acc_rate %>% 
+zero_shot_acc_rate_prompts <- zero_shot_degano_acc_rate %>% 
   mutate(prompting = "zero-shot") %>%
   rbind(., 
         degano2024_acc_rate %>% 
-          filter(model == "Llama-2-13b-chat-hf") %>%
+          #filter(model == "Llama-2-13b-chat-hf") %>%
   mutate(prompting = "few-shot"))
 
-zero_shot_prob_prompts <- zero_shot_prob %>% 
+zero_shot_prob_prompts <- zero_shot_degano_prob %>% 
   mutate(prompting = "zero-shot") %>%
   rbind(., 
         degano2024_prob %>% 
-          filter(model == "Llama-2-13b-chat-hf") %>%
+          #filter(model == "Llama-2-13b-chat-hf") %>%
   mutate(prompting = "few-shot"))
 ```
 
-WTA plot:
-```{r, warning=FALSE, fig.height=5}
+Average probability:
+```{r, warning=FALSE, fig.height=8}
 zero_shot_prob_prompts %>% 
   ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper, fill = prompting)) +
   geom_col(position=position_dodge()) +
   geom_errorbar(width = 0.1, position = position_dodge(0.95)) +
-  facet_wrap(Experiment~.) +
+  facet_wrap(Experiment~model) +
   ylab("Probability of acceptance") +
   theme_csp() +
   theme(axis.text.x = element_text(angle=30)) 
 ```
 
-Average probability:
-
-```{r, warning=FALSE, fig.height=5}
+WTA:
+```{r, warning=FALSE, fig.height=8}
 zero_shot_acc_rate_prompts %>% 
   ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper, fill = prompting)) +
   geom_col(position=position_dodge()) +
   geom_errorbar(width = 0.1, position = position_dodge(0.95)) +
-  facet_wrap(Experiment~.) +
+  facet_wrap(Experiment~model) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+```
+
+Now we replicate the overview plots from above on the zero-shot data.
+WTA:
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.height=8}
+zero_shot_degano_acc_rate %>% 
+  ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col() +
+  geom_errorbar(width = 0.1) +
+  facet_wrap(model~Experiment, ncol = 3) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+```
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.height=8}
+zero_shot_marty2023_acc_rate %>% 
+  ggplot(., aes(x = Condition, y = mean, fill = Quantifier_type, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(model~Experiment) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+```
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.height=20}
+# by experiment
+e4_zs <- zero_shot_marty2022_acc_rate %>% 
+  filter(Experiment == "Exp_4") %>%
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+
+e5_zs <- zero_shot_marty2022_acc_rate %>% 
+  filter(Experiment == "Exp_5") %>%
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30))
+
+e6_zs <- zero_shot_marty2022_acc_rate %>% 
+  filter(Experiment == "Exp_6") %>%
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+
+# bind the plots together
+gridExtra::grid.arrange(e4_zs, e5_zs, e6_zs)
+
+```
+
+Item-level probability (wide-scope):
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.height=8}
+zero_shot_degano_prob %>% 
+  ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col() +
+  geom_errorbar(width = 0.1) +
+  facet_wrap(model~Experiment, ncol = 3) +
   ylab("Probability of acceptance") +
   theme_csp() +
   theme(axis.text.x = element_text(angle=30)) 
+```
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.height=8}
+zero_shot_marty2023_prob %>% 
+  ggplot(., aes(x = Condition, y = mean, fill = Quantifier_type, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(model~Experiment) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+```
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.height=20}
+# by experiment
+e4_zs <- zero_shot_marty2022_prob %>% 
+  filter(Experiment == "Exp_4") %>%
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+
+e5_zs <- zero_shot_marty2022_prob %>% 
+  filter(Experiment == "Exp_5") %>%
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30))
+
+e6_zs <- zero_shot_marty2022_prob %>% 
+  filter(Experiment == "Exp_6") %>%
+  ggplot(., aes(x = Condition, y = mean, fill = Polarity, ymin = ci_lower, ymax = ci_upper)) +
+  geom_col(position = position_dodge()) +
+  geom_errorbar(position = position_dodge(0.95), width = 0.1) +
+  facet_wrap(Inference_type~model, nrow = 4) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+
+# bind the plots together
+gridExtra::grid.arrange(e4_zs, e5_zs, e6_zs)
+```
+
+# Quotation marks around answer options
+
+For exploration purposes, we test whether performance changes (in a zero-shot setting), for 7b and 13b models, when the choice options appear as "good" or as "bad". Exploration is done on Degano et al 2024 only. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+degano_quotes_paths <- list.files(path = "../results/00_exploration/", pattern = "quotations_zeroShot_Deganoetal2024_*",
+           full.names = TRUE) 
+q_degano <- bind_rows(map(degano_quotes_paths, read_and_save_model_q))
+q_degano_processed <- process_response(q_degano)
+q_degano_processed_acc_rate <- q_degano_processed %>% 
+  mutate(
+    is_good = as.numeric(chosen_response == "good")
+  ) %>% 
+  group_by(model, Condition, Experiment) %>% 
+  tidyboot_mean(column = is_good) 
+
+q_degano_processed_prob <- q_degano_processed %>% 
+  group_by(model, Experiment, Condition) %>% 
+  tidyboot_mean(column = prob_good)
+
+
+q_comparison <- q_degano_processed_acc_rate %>%
+  mutate(prompt = "with quotes") %>%
+  rbind(.,
+zero_shot_degano_acc_rate %>% mutate(
+  prompt = "no quotes"
+))
+
+q_comaprison_prob <- q_degano_processed_prob %>%
+  mutate(prompt = "with quotes") %>%
+  rbind(.,
+zero_shot_degano_prob %>% mutate(
+  prompt = "no quotes"
+))
+```
+
+```{r, echo=FALSE, fig.height=15}
+# WTA
+q_comparison %>% 
+  ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper, fill = prompt)) +
+  geom_col(position=position_dodge()) +
+  geom_errorbar(width = 0.1, position = position_dodge(0.95)) +
+  facet_wrap(Experiment~model) +
+  ylab("Acceptance rate") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30)) 
+
+# probs 
+q_comaprison_prob %>% 
+  ggplot(., aes(x = Condition, y = mean, ymin = ci_lower, ymax = ci_upper, fill = prompt)) +
+  geom_col(position=position_dodge()) +
+  geom_errorbar(width = 0.1, position = position_dodge(0.95)) +
+  facet_wrap(Experiment~model) +
+  ylab("Probability of acceptance") +
+  theme_csp() +
+  theme(axis.text.x = element_text(angle=30))
 ```
