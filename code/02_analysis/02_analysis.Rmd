@@ -8,35 +8,74 @@ output: html_document
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(tidyboot)
-library(cspplot)
+
 ```
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+This script can be used for analyzing the final filtered and processed results of LLM runs on all experiments. This means, the data analyzed here contains only results of top three LLMs for each experiment which performed above chance (at least 0.55) on control trials in each experiment of each study. 
+
+In the following, results can be processed by-study and by-condition. 
+
+Read in processed data:
+```{r data, message=FALSE, warning=FALSE}
 degano <- read_csv("../../results/03_tidy/deganoetal2024_tidy.csv")
-m2022 <- read_csv("../../results/03_tidy/martyetal2023_tidy.csv")
-m2023 <- read_csv("../../results/03_tidy/martyetal2022_tidy.csv")
+m2023 <- read_csv("../../results/03_tidy/martyetal2023_tidy.csv")
+m2022 <- read_csv("../../results/03_tidy/martyetal2022_tidy.csv")
+```
+
+For the control conditions (i.e., the Good and Bad conditions), the accuracy is added in the column "is_correct" (i.e., whether the predicted response matches the expected response). The column has no value (NA) for other conditions.
+Furthermore, the predicted response (column chosen_response) is transformed into a numerical representation, where 1 means "good" was predicted by the model, and 0 means "bad" was predicted by the model.
+
+```{r correctness}
+compute_correctness <- function(d){
+  d <- d %>%
+    mutate(
+      is_correct = case_when(
+        (Condition == "Bad") | (Condition == "Good") ~ tolower(Condition) == chosen_response,
+        TRUE ~ NA
+      ),
+      chosen_response = ifelse(chosen_response == "good", 1, 0)
+    )
+  return(d)
+}
+degano <- compute_correctness(degano)
+m2022 <- compute_correctness(m2022) 
+m2023 <- compute_correctness(m2023)
 ```
 
 # Creating a matrix with key results
 
+Below, a blueprint for a function which will return aggregated results (by-study). Specifically, the function takes in the dataframes created above, aggregates them by relevant conditions and computes comparisons of interest. Since the relevant grouping variables for single conditions differ between studies, these are passed as a vector. A suggestion for the grouping variables for the studies is provided.
 
-Below, the by-condition accuracies are computed and collected in a dataframe. This is done by-study.
-TODO: The entrypoint for adding more computations would be to extend the mutate() call to include other comparisons.
+The first provided measure is the accuracy in the control trials by sentence-type (NA in other conditions).
+For convenience, the by-condition acceptance rate (i.e., proportion of prediction of "good") is computed.
+The code can be extended and modified as required.
 
 ```{r contrasts}
-degano_control_accuracy <- degano %>%
-  filter((Condition == "Bad") | (Condition == "Good")) %>%
-  mutate(is_correct = tolower(Condition) == chosen_response) %>%
-  group_by(Study, model, Sentence_type) %>%
-  summarize(control_accuracy = mean(is_correct))
+degano_grouping <- c("model", "Sentence_type", "Condition")
+m2023_grouping <- c("model", "Modal_flavor", "Quantifier_type", "Sentence_type", "Condition")
+m2022_grouping <- c("model", "Negation", "Polarity", "Inference_type", "Condition")
 
-# tensor of model x condition good-responose-proportions
-# compute condition-level accepance rates (i.e., good choice proportion)
-degano_contrasts <- degano %>%
-  group_by(Condition) 
-  
-# TODO write function which can be extended and will output the summary tibble
+#function which can be extended and will output a summary tibble
 analyze_results <- function(df, grouping_variables){
-  # TODO find out the variable situation
+  
+  df_summary <- df %>%
+    group_by(!!!syms(grouping_variables)) %>%
+    summarize(
+      control_accuracy = mean(is_correct),
+      acceptance_rate = mean(chosen_response)
+    ) #%>%
+    # the following can be used to pull contrasts of interest, e.g., compare means by comparing the acceptance rates 
+    # (might require wide formatting)
+    #mutate(
+    #  ...
+    #)
+  return(df_summary)
 }
+```
+
+Call the function:
+```{r analysis, message=FALSE, warning=FALSE}
+degano_summary <- analyze_results(degano, degano_grouping)
+m2023_summary <- analyze_results(m2023, m2023_grouping)
+m2022_summary <- analyze_results(m2022, m2022_grouping)
 ```
