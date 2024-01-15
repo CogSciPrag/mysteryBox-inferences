@@ -16,7 +16,12 @@ In this second example, one can infer for instance that the mystery box must con
 You will see many quadruplets like these ones, each of which will be accompanied by an utterance from either Sam or Mia about what the mystery box contains. 
 Your task is to decide if this utterance is or is not a good description of what’s inside the mystery box. You will answer 'Good' if you consider the utterance a good description of the mystery box’s contents; otherwise you will answer 'Bad'.
 
+You will start with a short training to get you familiar with the response procedure. 
+During this training, you will see examples of correct responses.
+### Training
+{few_shot_trials}
+
 ### Your turn
-Sam and Mia will produce utterances about what the mystery box contains and you will decide whether these utterances are appropriate descriptions of the pictures you see.
+As in the training, Sam and Mia will produce utterances about what the mystery box contains and you will decide whether these utterances are appropriate descriptions of the pictures you see.
 
 {critical_trial}

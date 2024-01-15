@@ -8,6 +8,7 @@ import pandas as pd
 import time
 from openai_scores import get_openai_model_predictions
 from llama_scores import get_llama_model_predictions
+from hf_scores import get_hf_model_predictions
 import openai
 import torch
 from transformers import (
@@ -29,10 +30,10 @@ def main(
     """
     model_name_out = model_name.split('/')[-1]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-    out_name = f'../results/zeroShot_{study_name}_{experiment_name}_{model_name_out}_{timestamp}.csv'
+    out_name = f'../../results/01_raw/{study_name}_{experiment_name}_{model_name_out}_{timestamp}.csv'
 
     # set up llama
-    if "llama" in model_name:
+    if "davinci" not in model_name:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForCausalLM.from_pretrained(
             model_name, 
@@ -44,11 +45,11 @@ def main(
 
     # read the study items
     data = pd.read_csv(
-        f"../data/stimuli/Input_{study_name}.csv"
+        f"../../data/stimuli/Input_{study_name}.csv"
     )
     # read the prompts
-    instructions_path = f"../data/prompts/{study_name}_instructions.txt"
-    item_template_path = f"../data/prompts/{study_name}_itemTemplate.txt"
+    instructions_path = f"../../data/prompts/{study_name}_instructions.txt"
+    item_template_path = f"../../data/prompts/{study_name}_itemTemplate.txt"
     with open(instructions_path, "r") as f:
         instructions = f.read()
     with open(item_template_path, "r") as f:
@@ -87,7 +88,7 @@ def main(
         #pprint(trial_formatted)
         # construct overall prompt
         prompt = instructions.format(
-            #few_shot_trials=few_shot_items_formatted,
+            few_shot_trials=few_shot_items_formatted,
             critical_trial=trial_formatted,
         )
         # print("Overall prompt ")
@@ -100,7 +101,7 @@ def main(
                 answer_good="good", 
                 answer_bad="bad",
             )
-        else:
+        elif "llama" in model_name:
             predictions = get_llama_model_predictions(
                 prompt, 
                 answer_good="good", 
@@ -108,6 +109,10 @@ def main(
                 model=model,
                 tokenizer=tokenizer,
                 model_name=model_name,
+            )
+        else:
+            predictions = get_hf_model_predictions(
+
             )
         trial = {
             "Few_shot_items_order": few_shot_shuffled_item_ids

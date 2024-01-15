@@ -29,6 +29,7 @@ module load devel/cuda/11.6
 # iterate over studies and models
 studies=("Martyetal2023" "Martyetal2022")
 models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-7b-chat-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
+hf_models=("EleutherAI/pythia-6.9b" "phi-2" "mistral")
 # iterate over experiments
 expts2024=("Exp_1" "Exp_2" "Exp_3")
 expts2023=("Exp_1" "Exp_2")
