@@ -25,6 +25,7 @@ def getLogProbContinuation(
         continuation, 
         model,
         tokenizer,
+        model_name='',
         preface = ''):
     """
     Helper for retrieving log probability of different response types from Llama-2 of various sizes.
@@ -32,17 +33,61 @@ def getLogProbContinuation(
 
     initialSequence = preface + initialSequence
     prompt = preface + initialSequence + continuation
-    # tokenize separately, so as to know the shape of the continuation
-    input_ids_prompt = tokenizer(
-        initialSequence.strip(), 
-        return_tensors="pt",
-    ).input_ids
-    input_ids = tokenizer(
-        prompt,
-        return_tensors="pt",
-    ).input_ids.to("cuda:0")
+    # for mistral / mixtral instruct the formatting is a bit different
+    if "Instruct" in model_name:
+        # split the last continuation sentence from the overall prompt
+        prompt_separate = "\n".join(initialSequence.split("\n")[:-1])
+        completion_separate = initialSequence.split("\n")[-1]
+        print("completion separate ", completion_separate)
+        print("prompt separate ", prompt_separate)
+        messages = [
+            {"role": "user", "content": prompt_separate},
+            {"role": "assistant", "content": completion_separate + continuation}
+        ]
+
+        input_ids = tokenizer.apply_chat_template(messages, return_tensors="pt").input_ids.to("cuda:0")
+
+        # tokenize separately, so as to know the shape of the continuation
+        messages_noCont = [
+            {"role": "user", "content": prompt_separate},
+            {"role": "assistant", "content": completion_separate}
+        ]
+        input_ids_prompt = tokenizer.apply_chat_template(
+            messages_noCont, 
+            return_tensors="pt",
+        ).input_ids
+    # the tested non-mistral models don't prepend the BOS token, so it is done manually
+    elif "mistral" not in model_name:
+        raw_input_ids = tokenizer.encode(
+            prompt,
+            add_special_tokens=False
+        )
+        # print(len(input_ids))
+        input_ids = torch.tensor(
+            [tokenizer.bos_token_id] + raw_input_ids
+        ).unsqueeze(0).to("cuda:0")
+        print("Input ids shape for models w/o default BOS token ", input_ids.shape)
+        raw_input_ids_prompt = tokenizer.encode(
+            initialSequence.strip(),
+            add_special_tokens=False
+        )
+        input_ids_prompt = torch.tensor(
+            [tokenizer.bos_token_id] + raw_input_ids_prompt
+        ).unsqueeze(0)
+        print("Input ids promt for models w/o default BOS token ", input_ids_prompt.shape)
+    else:
+
+        # tokenize separately, so as to know the shape of the continuation
+        input_ids_prompt = tokenizer(
+            initialSequence.strip(), 
+            return_tensors="pt",
+        ).input_ids
+        input_ids = tokenizer(
+            prompt,
+            return_tensors="pt",
+        ).input_ids.to("cuda:0")
     print("input_ids prompt ", input_ids_prompt.shape)
-    print("input ids ", input_ids)
+    print("input ids ", input_ids.shape, input_ids)
     # print("input ids continuation ", input_ids_continuation.shape, input_ids_continuation)
     # cut off the first token of the continuation, as it is SOS
     # input_ids = torch.cat(
@@ -112,21 +157,21 @@ def get_hf_model_predictions(
     # assume that the task and context come from the user, and the response from the model
     # no specific system prompt is passed
     # if one wanted to, the expected formatting would be: [INST]<<SYS>>{system prompt}<</SYS>>\n\n{user message}[/INST]
-    # if "chat" in model_name:
-    #     prompt = f"[INST]{prompt}[/INST]"
 
     # get scores
     log_prob_good, mean_log_prob_good  = getLogProbContinuation(
         prompt, 
         answer_good,
         model, 
-        tokenizer
+        tokenizer,
+        model_name=model_name,
     )
     log_prob_bad, mean_log_prob_bad  = getLogProbContinuation(
         prompt, 
         answer_bad,
         model, 
-        tokenizer
+        tokenizer,
+        model_name=model_name,
     )
     
     output = {
