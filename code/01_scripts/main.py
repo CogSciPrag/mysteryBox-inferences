@@ -112,7 +112,12 @@ def main(
             )
         else:
             predictions = get_hf_model_predictions(
-
+                prompt, 
+                answer_good="good", 
+                answer_bad="bad",
+                model=model,
+                tokenizer=tokenizer,
+                model_name=model_name,
             )
         trial = {
             "Few_shot_items_order": few_shot_shuffled_item_ids
