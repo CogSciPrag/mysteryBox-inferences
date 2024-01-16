@@ -34,11 +34,12 @@ def main(
 
     # set up llama
     if "davinci" not in model_name:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             model_name, 
             device_map='auto', 
-            torch_dtype=torch.float16
+            torch_dtype=torch.float16,
+            trust_remote_code=True
         )
         model.eval()
         print("----- model dtype ------", model.dtype)

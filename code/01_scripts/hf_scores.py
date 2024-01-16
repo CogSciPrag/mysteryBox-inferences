@@ -45,7 +45,7 @@ def getLogProbContinuation(
             {"role": "assistant", "content": completion_separate + continuation}
         ]
 
-        input_ids = tokenizer.apply_chat_template(messages, return_tensors="pt").input_ids.to("cuda:0")
+        input_ids = tokenizer.apply_chat_template(messages, return_tensors="pt").to("cuda:0")
 
         # tokenize separately, so as to know the shape of the continuation
         messages_noCont = [
@@ -55,7 +55,7 @@ def getLogProbContinuation(
         input_ids_prompt = tokenizer.apply_chat_template(
             messages_noCont, 
             return_tensors="pt",
-        ).input_ids
+        )
     # the tested non-mistral models don't prepend the BOS token, so it is done manually
     elif "mistral" not in model_name:
         raw_input_ids = tokenizer.encode(
