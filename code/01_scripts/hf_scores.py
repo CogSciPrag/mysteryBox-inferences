@@ -50,7 +50,7 @@ def getLogProbContinuation(
         # tokenize separately, so as to know the shape of the continuation
         messages_noCont = [
             {"role": "user", "content": prompt_separate},
-            {"role": "assistant", "content": completion_separate}
+            {"role": "assistant", "content": completion_separate.strip()}
         ]
         input_ids_prompt = tokenizer.apply_chat_template(
             messages_noCont, 
