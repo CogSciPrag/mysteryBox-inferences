@@ -39,7 +39,7 @@ def main(
             model_name, 
             device_map='auto', 
             torch_dtype=torch.float16,
-            trust_remote_code=True
+            #trust_remote_code=True
         )
         model.eval()
         print("----- model dtype ------", model.dtype)
