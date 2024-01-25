@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --partition=single
 #SBATCH --ntasks=1
-#SBATCH --time=03:00:00
-#SBATCH --mem=237gb
-#SBATCH --gres=gpu:A100:2
+#SBATCH --time=05:00:00
+#SBATCH --mem=60gb
+#SBATCH --gres=gpu:A40:1
 
 echo 'Running simulation'
 
@@ -26,10 +26,10 @@ echo " "
 # activate CUDA
 module load devel/cuda/11.6
 
-# iterate over studies and models
-studies=("Deganoetal2024")
+# iterate over studies and model s
+studies=("Martyetal2022" "Martyetal2023")
 models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-7b-chat-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
-hf_models=("mistralai/Mixtral-8x7B-Instruct-v0.1") # EleutherAI/pythia-6.9b "microsoft/phi-2" "mistralai/Mistral-7B-Instruct-v0.2" "mistralai/Mistral-7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-v0.1") # "tiiuae/falcon-7b"  "opt" "dialoGPT"
+hf_models=("mistralai/Mistral-7B-Instruct-v0.2") # "mistralai/Mistral-7B-v0.1") # EleutherAI/pythia-6.9b "microsoft/phi-2" "mistralai/Mistral-7B-Instruct-v0.2" "mistralai/Mistral-7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-v0.1") # "tiiuae/falcon-7b"  "opt" "dialoGPT"
 # iterate over experiments
 expts2024=("Exp_1" "Exp_2" "Exp_3")
 expts2023=("Exp_1" "Exp_2")
