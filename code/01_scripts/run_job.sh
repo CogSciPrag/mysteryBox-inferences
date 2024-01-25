@@ -29,7 +29,7 @@ module load devel/cuda/11.6
 # iterate over studies and models
 studies=("Deganoetal2024" "Martyetal2023" "Martyetal2022")
 models=("meta-llama/Llama-2-7b-hf" "meta-llama/Llama-2-13b-hf" "meta-llama/Llama-2-7b-chat-hf" "meta-llama/Llama-2-13b-chat-hf") #"meta-llama/Llama-2-7b-hf"
-hf_models=("microsoft/phi-2") # EleutherAI/pythia-6.9b "microsoft/phi-2" "mistralai/Mistral-7B-Instruct-v0.2" "mistralai/Mistral-7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-v0.1") # "tiiuae/falcon-7b"  "opt" "dialoGPT"
+hf_models=("tiiuae/falcon-7b") # EleutherAI/pythia-6.9b "microsoft/phi-2" "mistralai/Mistral-7B-Instruct-v0.2" "mistralai/Mistral-7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-Instruct-v0.1" "mistralai/Mixtral-8x7B-v0.1") # "tiiuae/falcon-7b"  "opt" "dialoGPT"
 # iterate over experiments
 expts2024=("Exp_1" "Exp_2" "Exp_3")
 expts2023=("Exp_1" "Exp_2")
