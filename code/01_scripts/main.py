@@ -10,6 +10,7 @@ from openai_scores import get_openai_model_predictions
 from llama_scores import get_llama_model_predictions
 from hf_scores import get_hf_model_predictions
 import openai
+import transformers
 import torch
 from transformers import (
     AutoModelForCausalLM, 
@@ -35,6 +36,8 @@ def main(
     # set up llama
     if "davinci" not in model_name:
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        
+
         model = AutoModelForCausalLM.from_pretrained(
             model_name, 
             device_map='auto', 
@@ -43,6 +46,28 @@ def main(
         )
         model.eval()
         print("----- model dtype ------", model.dtype)
+
+    if "falcon" in model_name:
+            tokenizer.bos_token_id = tokenizer.eos_token_id
+            # sanity check
+            pipeline = transformers.pipeline(
+                "text-generation",
+                model=model,
+                tokenizer=tokenizer,
+                torch_dtype=torch.bfloat16,
+                trust_remote_code=True,
+                device_map="auto",
+            )
+            sequences = pipeline(
+            "Girafatron is obsessed with giraffes,",
+                max_length=200,
+                do_sample=True,
+                top_k=10,
+                num_return_sequences=1,
+                eos_token_id=tokenizer.eos_token_id,
+                return_tensors=True,
+            )
+            print("Pipeline sequences ", sequences)
 
     # read the study items
     data = pd.read_csv(
