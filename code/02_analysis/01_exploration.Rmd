@@ -207,31 +207,34 @@ Based on the analyses above, the following turns out: For all studies, across ex
 Therefore, we subset the data to these results only. The tidy data frames can be found under results/03_tidy. The also only contain WTA predictions now. 
 ```{r, echo=FALSE}
 degano_filtered <- degano2024_processed %>%
-  filter(((Experiment == "Exp_1") & (model == "text-davinci-003")) | 
+  filter(( (model == "text-davinci-003")) | 
            ((model == "Llama-2-70b-hf")) |
-           ((model == "Llama-2-13b-hf")) |
-           ((Experiment == "Exp_2") & (model == "Llama-2-7b-hf")) | 
-           ((Experiment == "Exp_3") & (model == "text-davinci-003")) 
+           ((model == "Llama-2-13b-hf")) 
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
-#degano_filtered %>% write_csv("../results/03_tidy/deganoetal2024_tidy.csv")
+#degano_filtered %>% write_csv("../../results/03_tidy/deganoetal2024_tidy.csv")
 
 marty2023_filtered <- marty2023_processed %>%
   filter(
-           ((model == "Llama-2-70b-hf")) |
-           ((model == "Llama-2-13b-hf")) |
-           ((model == "text-davinci-003"))
+           ((Experiment == "Exp_1") & (model == "Mistral-7B-v0.1")) |
+          ((Experiment == "Exp_2") & (model == "text-davinci-003")) |
+           ((model == "Mixtral-8x7B-v0.1")) |
+           ((model == "Llama-2-70b-hf"))
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
 
-#marty2023_filtered %>% write_csv("../results/03_tidy/martyetal2023_tidy.csv")
+#marty2023_filtered %>% write_csv("../../results/03_tidy/martyetal2023_tidy.csv")
 
 marty2022_filtered <- marty2022_processed %>%
-  filter(((Experiment == "Exp_6") & (model == "Llama-2-7b-chat-hf")) | 
-           ((model == "Llama-2-70b-hf")) |
+  filter(((Experiment == "Exp_4") & (model == "Llama-2-70b-hf")) | 
+           ((Experiment == "Exp_4") & (model == "Mixtral-8x7B-v0.1")) | 
+          ((Experiment == "Exp_5") & (model == "Mistral-7B-Instruct-v0.2")) | 
+           ((Experiment == "Exp_5") & (model == "Mixtral-8x7B-Instruct-v0.1")) |
+           ((Experiment == "Exp_6") & (model == "Llama-2-70b-hf")) | 
+           ((Experiment == "Exp_6") & (model == "Llama-2-7b-chat-hf")) |
            ((model == "text-davinci-003"))  
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
-#marty2022_filtered %>% write_csv("../results/03_tidy/martyetal2022_tidy.csv")
+#marty2022_filtered %>% write_csv("../../results/03_tidy/martyetal2022_tidy.csv")
 ```
-  
+
 # Plots
 Below, we plot the mean acceptance rate (i.e., the mean proportion of judgments that a trigger sentence is good) by-model, by experiment and by-condition. 
 
