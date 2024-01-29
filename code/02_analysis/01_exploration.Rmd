@@ -22,11 +22,11 @@ The results were retrieved by retrieving the log probability of the labels "good
 * [Marty et al 2022](https://github.com/CogSciPrag/mysteryBox-inferences/blob/main/data/prompts/Martyetal2022_instructions.txt)
 
 ```{r data, warning=FALSE, message=FALSE, echo=FALSE}
-results_paths_degano2024 <- list.files(path = "../results/01_raw/", pattern = "Deganoetal2024_*",
+results_paths_degano2024 <- list.files(path = "../../results/01_raw/", pattern = "Deganoetal2024_*",
            full.names = TRUE) 
-results_paths_marty2023 <- list.files(path = "../results/01_raw/", pattern = "Martyetal2023_*",
+results_paths_marty2023 <- list.files(path = "../../results/01_raw/", pattern = "Martyetal2023_*",
            full.names = TRUE) 
-results_paths_marty2022 <- list.files(path = "../results/01_raw/", pattern = "Martyetal2022_*",
+results_paths_marty2022 <- list.files(path = "../../results/01_raw/", pattern = "Martyetal2022_*",
            full.names = TRUE) 
 
 
@@ -46,9 +46,9 @@ read_and_save_model_q <- function(p) {
   d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,7])
   return(d)
 }
-degano2024 <- bind_rows(map(results_paths_degano2024, read_and_save_model))
-marty2023 <- bind_rows(map(results_paths_marty2023, read_and_save_model))
-marty2022 <- bind_rows(map(results_paths_marty2022, read_and_save_model))
+degano2024 <- bind_rows(map(results_paths_degano2024, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
+marty2023 <- bind_rows(map(results_paths_marty2023, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
+marty2022 <- bind_rows(map(results_paths_marty2022, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
 
 ```
 
@@ -126,24 +126,68 @@ The processed data is saved such that the probabilities of each response option 
 To determine which linking function (WTA or item-level probability averaging) is better, we explore the accuracy on the control conditions (bad and good in all experiments), by single experiment. For exploration, we also check the control performance by-condition, where relevant.
 
 ```{r}
-check_controls <- function(d) {
-  d_controls <- d %>%
-  filter((Condition == "Bad") | (Condition == "Good")) %>%
-  mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
+check_controls <- function(d, return_all=FALSE) {
+  if("Deganoetal_2024" %in% d$Study){
+    d_controls <- d %>% filter(Sentence_type != "Test")
+  } else if("Martyetal_2023" %in% d$Study){
+    d_controls <- d %>% filter(Sentence_type != "Test")
+  } else {
+    d_controls <- d %>% filter(Condition != "Target")
+  }
+  d_controls_props <- d_controls  %>%
+    mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
          is_correct = ground_truth == chosen_response,
          option_probability = ifelse(Condition == "Good", prob_good, prob_bad))
   
-d_summary <- d_controls %>%
-  group_by(Study, Experiment, model) %>%
+  d_summary <- d_controls_props %>%
+    group_by(Study, Experiment, model) %>%
   summarize(wta_accuracy = mean(is_correct),
             item_prob_accuracy = mean(option_probability)) %>%
   mutate(better_metric = ifelse(wta_accuracy > item_prob_accuracy, "wta_accuracy", "item_prob_accuracy"))
-return(d_summary)
+  
+  # sort to models according to acc
+  expts <- d_summary %>% pull(Experiment) %>% unique()
+  if (return_all){
+    top3 <- d_summary %>%
+      arrange(desc(wta_accuracy))
+  } else {
+  top3 <- tibble()
+  for (i in expts){
+    top_3_for_e <- d_summary %>%
+      filter(Experiment == i) %>%
+      arrange(desc(wta_accuracy)) %>%
+      filter(wta_accuracy > 0.55) %>%
+      slice(1:3)
+    top3 <- rbind(top3, top_3_for_e)
+  }
+  }
+
+return(top3)
 }
 
-check_controls(degano2024_processed) #%>% count(better_metric)
-check_controls(marty2023_processed)  #%>% count(better_metric)
-check_controls(marty2022_processed) #%>% count(better_metric)
+best_models_degano <- check_controls(degano2024_processed) # %>%ungroup()%>% count(better_metric)
+best_models_marty2023 <- check_controls(marty2023_processed)  #%>%ungroup()%>% count(better_metric)
+best_models_marty2022 <- check_controls(marty2022_processed) #%>%ungroup()%>% count(better_metric)
+```
+
+```{r}
+# write control accuracy for the paper
+conrol_acc_degano <- check_controls(degano2024_processed, return_all = TRUE) 
+conrol_acc_marty2023 <- check_controls(marty2023_processed, return_all = TRUE) 
+conrol_acc_marty2022 <- check_controls(marty2022_processed, return_all = TRUE) 
+#conrol_acc_degano %>% select(-item_prob_accuracy, -better_metric) %>% write_csv("../../results/02_processed_all/degano2024_control_acc.csv")
+#conrol_acc_marty2023 %>% select(-item_prob_accuracy, -better_metric) %>% write_csv("../../results/02_processed_all/marty2023_control_acc.csv")
+#conrol_acc_marty2022 %>% select(-item_prob_accuracy, -better_metric) %>% write_csv("../../results/02_processed_all/marty2022_control_acc.csv")
+```
+
+Create a wide table of controll accuracies:
+```{r}
+controls_all <- rbind(conrol_acc_degano, conrol_acc_marty2023, conrol_acc_marty2022)
+controls_all_wide <- controls_all %>% select(-item_prob_accuracy, -better_metric) %>%
+  mutate(wta_accuracy = round(wta_accuracy, 2)) %>%
+  pivot_wider(names_from = c(Study, Experiment), names_sep = "_", values_from = wta_accuracy)
+
+#controls_all_wide %>% write_csv("../../results/02_processed_all/control_acc_all.csv")
 ```
 
 Based on the analyses above, the following turns out: For all studies, across experiments, WTA is a better linking function in terms of control accuracy by-study by-experiment. I.e., under WTA, average control accuracies of experiments were higher. We select top 3 models for each experiment based on WTA. In particular, we only take models whose performance is above chance at least by 0.05 (i.e., at least 0.56).
@@ -151,43 +195,46 @@ Based on the analyses above, the following turns out: For all studies, across ex
 * Degano et al 2024: 
   * E1: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf
   * E2: top 3 models: Llama-2-7b-hf, Llama-2-13b-hf, 	Llama-2-70b-hf
-  * E3: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf
+  * E3: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf (Mixtral instead of 13b)
 * Marty et al 2023: 
-  * E1: top 3 models: text-davinci-003, Llama-2-70b-hf,	Llama-2-7b-chat-hf or Llama-2-13b-hf (tie)
-  * E2: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf
+  * E1: top 3 models: text-davinci-003, Llama-2-70b-hf,	Llama-2-7b-chat-hf or Llama-2-13b-hf (tie) (Mixtral and Mistral-7B-v0.1 instead of 13b and 7b)
+  * E2: top 3 models: text-davinci-003, Llama-2-70b-hf, Llama-2-13b-hf (Mixtral instead of 13b)
 * Marty et al 2022: 
-  * E4: top 3 models: text-davinci-003, Llama-2-70b-hf
-  * E5: top 3 models: text-davinci-003, Llama-2-70b-hf
+  * E4: top 3 models: text-davinci-003, Llama-2-70b-hf (and mixtral)
+  * E5: top 3 models: text-davinci-003, Llama-2-70b-hf (and mixtral)
   * E6: top 3 models: text-davinci-003, Llama-2-70b-hf,	Llama-2-7b-chat-hf
   
 Therefore, we subset the data to these results only. The tidy data frames can be found under results/03_tidy. The also only contain WTA predictions now. 
 ```{r, echo=FALSE}
 degano_filtered <- degano2024_processed %>%
-  filter(((Experiment == "Exp_1") & (model == "text-davinci-003")) | 
+  filter(( (model == "text-davinci-003")) | 
            ((model == "Llama-2-70b-hf")) |
-           ((model == "Llama-2-13b-hf")) |
-           ((Experiment == "Exp_2") & (model == "Llama-2-7b-hf")) | 
-           ((Experiment == "Exp_3") & (model == "text-davinci-003")) 
+           ((model == "Llama-2-13b-hf")) 
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
-#degano_filtered %>% write_csv("../results/03_tidy/deganoetal2024_tidy.csv")
+#degano_filtered %>% write_csv("../../results/03_tidy/deganoetal2024_tidy.csv")
 
 marty2023_filtered <- marty2023_processed %>%
   filter(
-           ((model == "Llama-2-70b-hf")) |
-           ((model == "Llama-2-13b-hf")) |
-           ((model == "text-davinci-003"))
+           ((Experiment == "Exp_1") & (model == "Mistral-7B-v0.1")) |
+          ((Experiment == "Exp_2") & (model == "text-davinci-003")) |
+           ((model == "Mixtral-8x7B-v0.1")) |
+           ((model == "Llama-2-70b-hf"))
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
 
-#marty2023_filtered %>% write_csv("../results/03_tidy/martyetal2023_tidy.csv")
+#marty2023_filtered %>% write_csv("../../results/03_tidy/martyetal2023_tidy.csv")
 
 marty2022_filtered <- marty2022_processed %>%
-  filter(((Experiment == "Exp_6") & (model == "Llama-2-7b-chat-hf")) | 
-           ((model == "Llama-2-70b-hf")) |
+  filter(((Experiment == "Exp_4") & (model == "Llama-2-70b-hf")) | 
+           ((Experiment == "Exp_4") & (model == "Mixtral-8x7B-v0.1")) | 
+          ((Experiment == "Exp_5") & (model == "Mistral-7B-Instruct-v0.2")) | 
+           ((Experiment == "Exp_5") & (model == "Mixtral-8x7B-Instruct-v0.1")) |
+           ((Experiment == "Exp_6") & (model == "Llama-2-70b-hf")) | 
+           ((Experiment == "Exp_6") & (model == "Llama-2-7b-chat-hf")) |
            ((model == "text-davinci-003"))  
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
-#marty2022_filtered %>% write_csv("../results/03_tidy/martyetal2022_tidy.csv")
+#marty2022_filtered %>% write_csv("../../results/03_tidy/martyetal2022_tidy.csv")
 ```
-  
+
 # Plots
 Below, we plot the mean acceptance rate (i.e., the mean proportion of judgments that a trigger sentence is good) by-model, by experiment and by-condition. 
 
@@ -600,4 +647,27 @@ q_comaprison_prob %>%
   ylab("Probability of acceptance") +
   theme_csp() +
   theme(axis.text.x = element_text(angle=30))
+```
+
+# Exploration of control performance of other models
+
+```{r}
+results_paths <- c("../../results/01_raw/Deganoetal2024_Exp_1_Mistral-7B-Instruct-v0.2_20240116_0835.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_1_Mistral-7B-v0.1_20240116_1047.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_1_Mixtral-8x7B-Instruct-v0.1_20240116_1335.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_1_pythia-6.9b_20240115_1723.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_2_Mistral-7B-Instruct-v0.2_20240116_0836.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_2_Mistral-7B-v0.1_20240116_1050.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_2_Mixtral-8x7B-Instruct-v0.1_20240116_1348.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_2_pythia-6.9b_20240115_1724.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_3_Mistral-7B-Instruct-v0.2_20240116_0836.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_3_Mistral-7B-v0.1_20240116_1050.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_3_Mixtral-8x7B-Instruct-v0.1_20240116_1350.csv",
+                   "../../results/01_raw/Deganoetal2024_Exp_3_pythia-6.9b_20240115_1724.csv"
+                   )
+
+model_results <- bind_rows(map(results_paths, read_and_save_model))
+
+# check accuracy on control items
+model_results %>% process_response(.) %>% check_controls()
 ```
