@@ -82,7 +82,9 @@ We apply these analyses by-study and then group the respective stats by conditio
 degano2024_processed <- process_response(degano2024)
 marty2023_processed <- process_response(marty2023)
 marty2022_processed <- process_response(marty2022)
+```
 
+```{r}
 degano2024_acc_rate <- degano2024_processed %>% 
   mutate(
     is_good = as.numeric(chosen_response == "good")
@@ -112,13 +114,13 @@ The processed data is saved such that the probabilities of each response option 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
 #degano2024_processed %>%
 #  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
-#  write_csv("../results/02_tidy/Deganoetal2024_results_tidy.csv")
+#  write_csv("../../results/02_processed_all/Deganoetal2024_results_tidy.csv")
 #marty2023_processed %>%
 #  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
-#  write_csv("../results/02_tidy/Martyetal2023_results_tidy.csv")
+#  write_csv("../../results/02_processed_all/Martyetal2023_results_tidy.csv")
 #marty2022_processed %>%
 #  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
-#  write_csv("../results/02_tidy/Martyetal2022_results_tidy.csv")
+#  write_csv("../../results/02_processed_all/Martyetal2022_results_tidy.csv")
 ```
 
 # Exploratory accuracy analysis
@@ -132,7 +134,8 @@ check_controls <- function(d, return_all=FALSE) {
   } else if("Martyetal_2023" %in% d$Study){
     d_controls <- d %>% filter(Sentence_type != "Test")
   } else {
-    d_controls <- d %>% filter(Condition != "Target")
+    d_controls <- d %>% filter(Condition != "Target") %>%
+      filter(Polarity == "Positive")
   }
   d_controls_props <- d_controls  %>%
     mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
@@ -140,26 +143,26 @@ check_controls <- function(d, return_all=FALSE) {
          option_probability = ifelse(Condition == "Good", prob_good, prob_bad))
   
   d_summary <- d_controls_props %>%
-    group_by(Study, Experiment, model) %>%
+    group_by(Study, model) %>%
   summarize(wta_accuracy = mean(is_correct),
             item_prob_accuracy = mean(option_probability)) %>%
   mutate(better_metric = ifelse(wta_accuracy > item_prob_accuracy, "wta_accuracy", "item_prob_accuracy"))
   
   # sort to models according to acc
-  expts <- d_summary %>% pull(Experiment) %>% unique()
+  #expts <- d_summary %>% pull(Experiment) %>% unique()
   if (return_all){
     top3 <- d_summary %>%
       arrange(desc(wta_accuracy))
   } else {
-  top3 <- tibble()
-  for (i in expts){
-    top_3_for_e <- d_summary %>%
-      filter(Experiment == i) %>%
+  #top3 <- tibble()
+  #for (i in expts){
+    top3 <- d_summary %>%
+      #filter(Experiment == i) %>%
       arrange(desc(wta_accuracy)) %>%
       filter(wta_accuracy > 0.55) %>%
-      slice(1:3)
-    top3 <- rbind(top3, top_3_for_e)
-  }
+      slice(1:6)
+    #top3 <- rbind(top3, top_3_for_e)
+  #}
   }
 
 return(top3)
@@ -168,6 +171,27 @@ return(top3)
 best_models_degano <- check_controls(degano2024_processed) # %>%ungroup()%>% count(better_metric)
 best_models_marty2023 <- check_controls(marty2023_processed)  #%>%ungroup()%>% count(better_metric)
 best_models_marty2022 <- check_controls(marty2022_processed) #%>%ungroup()%>% count(better_metric)
+
+top6_models <- rbind(best_models_degano,best_models_marty2023, best_models_marty2022 )
+top6_models %>% ungroup() %>%count(model) %>% View()
+
+top6_models %>% group_by(model) %>% summarize(mean_acc = mean(wta_accuracy)) %>% View()
+```
+
+The checks above show that There are three models which are best for all studies (Llama-2-70b-hf, Mixtral-8x7B-Instruct-v0.1,text-davinci-003) and six models which were top of 1 or 2 out of three studies. The models which were chosen for 2 out of 3 studies are Mistral-7B-Instruct-v0.2, Mistral-7B-v0.1, Mixtral-8x7B-v0.1. The top 6 models according to highest accuracy *across studies* are: Llama-2-70b-hf, text-davinci-003, Llama-2-13b-hf, phi-2, Mixtral-8x7B-v0.1, Mixtral-8x7B-Instruct-v0.1.
+The top 6 models with the best by-study performance are chosen:
+
+```{r}
+top6_models <- c("Llama-2-70b-hf", "Mixtral-8x7B-Instruct-v0.1","text-davinci-003", "Mistral-7B-Instruct-v0.2", "Mistral-7B-v0.1", "Mixtral-8x7B-v0.1")
+degano_top6 <- degano2024_processed %>%
+  filter(model %in% top6_models)
+marty2023_top6 <- marty2023_processed %>%
+  filter(model %in% top6_models)
+marty2022_top6 <- marty2022_processed %>%
+  filter(model %in% top6_models)
+#degano_top6 %>% write_csv("../../results/03_tidy/deganoetal2024_tidy_top6models.csv")
+marty2023_top6 %>% write_csv("../../results/03_tidy/martyetal2023_tidy_top6models.csv")
+marty2022_top6 %>% write_csv("../../results/03_tidy/martyetal2022_tidy_top6models.csv")
 ```
 
 ```{r}
@@ -182,14 +206,22 @@ conrol_acc_marty2022 <- check_controls(marty2022_processed, return_all = TRUE)
 
 Create a wide table of controll accuracies:
 ```{r}
+#controls_all_wide <- controls_all %>% select(-item_prob_accuracy, -better_metric) %>%
+#  mutate(wta_accuracy = round(wta_accuracy, 2)) %>%
+#  pivot_wider(names_from = c(Study, Experiment), names_sep = "_", values_from = wta_accuracy)
+
 controls_all <- rbind(conrol_acc_degano, conrol_acc_marty2023, conrol_acc_marty2022)
-controls_all_wide <- controls_all %>% select(-item_prob_accuracy, -better_metric) %>%
+controls_all_wide_byStudy <- controls_all %>% select(-item_prob_accuracy, -better_metric) %>%
   mutate(wta_accuracy = round(wta_accuracy, 2)) %>%
-  pivot_wider(names_from = c(Study, Experiment), names_sep = "_", values_from = wta_accuracy)
+  pivot_wider(names_from = c(Study), names_sep = "_", values_from = wta_accuracy)
+controls_all_wide_byStudy <- controls_all_wide_byStudy %>%
+  mutate(average_accuracy = 1/3*(`Deganoetal_2024`+ `Martyetal_2023`+ `Martyetal_2022`))
 
 #controls_all_wide %>% write_csv("../../results/02_processed_all/control_acc_all.csv")
+#controls_all_wide_byStudy %>% write_csv("../../results/02_processed_all/control_acc_byStudy.csv")
 ```
 
+DEPRECATED: 
 Based on the analyses above, the following turns out: For all studies, across experiments, WTA is a better linking function in terms of control accuracy by-study by-experiment. I.e., under WTA, average control accuracies of experiments were higher. We select top 3 models for each experiment based on WTA. In particular, we only take models whose performance is above chance at least by 0.05 (i.e., at least 0.56).
 
 * Degano et al 2024: 

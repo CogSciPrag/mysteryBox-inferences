@@ -1,0 +1,156 @@
+---
+title: 'Mystery box inferences: Preprocessing'
+author: "PT"
+date: "2024-01-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(tidyboot)
+library(cspplot)
+```
+
+# Import
+
+```{r data, warning=FALSE, message=FALSE, echo=FALSE}
+results_paths_degano2024 <- list.files(path = "../../results/01_raw/", pattern = "Deganoetal2024_*",
+           full.names = TRUE) 
+results_paths_marty2023 <- list.files(path = "../../results/01_raw/", pattern = "Martyetal2023_*",
+           full.names = TRUE) 
+results_paths_marty2022 <- list.files(path = "../../results/01_raw/", pattern = "Martyetal2022_*",
+           full.names = TRUE) 
+
+
+# read files and save model name
+read_and_save_model <- function(p) {
+  d <- read_csv(p)
+  d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,5])
+  return(d)
+}
+read_and_save_model_zs <- function(p) {
+  d <- read_csv(p)
+  d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,6])
+  return(d)
+}
+read_and_save_model_q <- function(p) {
+  d <- read_csv(p)
+  d <- d %>% mutate(model = str_split(p, "_", simplify=T)[,7])
+  return(d)
+}
+degano2024 <- bind_rows(map(results_paths_degano2024, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
+marty2023 <- bind_rows(map(results_paths_marty2023, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
+marty2022 <- bind_rows(map(results_paths_marty2022, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
+
+```
+
+# Analysis
+
+Below we analyse the selected response. We apply two analyses: 
+
+* WTA: first, we compute the proportion of responses predicting that the trigger sentence is "good" by checking whether the "good" response was assigned the higher LLH / probability (trial-level).
+* item-level probability: we compute the probability assigned to each response by applying softmax (alpha = 1) to LLHs from each trial and then averaging over the response probabilities by condition.
+
+In our other studies, thw WTA approach has shown better fit to human data. However, based on plots below, the probability based analysis might be better for these datasets.
+
+```{r preprocess}
+process_response <- function(d) {
+d <- d %>% 
+  rowwise() %>%
+  mutate(
+    chosen_response_llh = max(Mean_logprob_answer_good, Mean_logprob_answer_bad),
+    chosen_response = ifelse(chosen_response_llh == Mean_logprob_answer_good, "Mean_logprob_answer_good", "Mean_logprob_answer_bad"),
+    chosen_response = str_split(chosen_response, "_", simplify=T)[,4],
+    norm_factor = sum(exp(Mean_logprob_answer_good), exp(Mean_logprob_answer_bad)),
+    prob_good = exp(Mean_logprob_answer_good) / norm_factor,
+    prob_bad = exp(Mean_logprob_answer_bad) / norm_factor
+  )
+  return(d)
+}
+```
+
+We apply these analyses by-study and then group the respective stats by conditions of each respective study.
+```{r}
+degano2024_processed <- process_response(degano2024)
+marty2023_processed <- process_response(marty2023)
+marty2022_processed <- process_response(marty2022)
+```
+
+
+The processed data is saved such that the probabilities of each response option as well as the selected response are included on top of the raw materials' csvs (**columns prob_good, prob_bad, chosen_response** are the new columns containing the model results), along with the information which model was used to produce the results. The columns "prob_good", "prob_bad" contain trial-level probability of each option, while "chosen_response" contains the chosen response based on the argmax over prob_good and prob_bad (i.e., WTA strategy). 
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+#degano2024_processed %>%
+#  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
+#  write_csv("../../results/02_processed_all/Deganoetal2024_results_tidy.csv")
+#marty2023_processed %>%
+#  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
+#  write_csv("../../results/02_processed_all/Martyetal2023_results_tidy.csv")
+#marty2022_processed %>%
+#  select(-Few_shot_items_order, -Mean_logprob_answer_good, -Mean_logprob_answer_bad, -Sentence_logprob_answer_good, -Sentence_logprob_answer_bad, -chosen_response_llh, -norm_factor) %>%
+#  write_csv("../../results/02_processed_all/Martyetal2022_results_tidy.csv")
+```
+
+# Exploratory accuracy analysis
+
+To determine which linking function (WTA or item-level probability averaging) is better, we explore the accuracy on the control conditions (bad and good in all experiments), by single experiment. For exploration, we also check the control performance by-condition, where relevant.
+
+```{r}
+check_controls <- function(d, return_all=FALSE) {
+  if("Deganoetal_2024" %in% d$Study){
+    d_controls <- d %>% filter(Sentence_type != "Test")
+  } else if("Martyetal_2023" %in% d$Study){
+    d_controls <- d %>% filter(Sentence_type != "Test")
+  } else {
+    d_controls <- d %>% filter(Condition != "Target") %>%
+      filter(Polarity == "Positive")
+  }
+  d_controls_props <- d_controls  %>%
+    mutate(ground_truth = ifelse(Condition == "Good", "good", "bad"),
+         is_correct = ground_truth == chosen_response,
+         option_probability = ifelse(Condition == "Good", prob_good, prob_bad))
+  
+  d_summary <- d_controls_props %>%
+    group_by(Study, model) %>%
+  summarize(wta_accuracy = mean(is_correct),
+            item_prob_accuracy = mean(option_probability)) %>%
+  mutate(better_metric = ifelse(wta_accuracy > item_prob_accuracy, "wta_accuracy", "item_prob_accuracy"))
+  
+  # sort to models according to acc
+  if (return_all){
+    top3 <- d_summary %>%
+      arrange(desc(wta_accuracy))
+  } else {
+    top3 <- d_summary %>%
+      arrange(desc(wta_accuracy)) %>%
+      filter(wta_accuracy > 0.55) %>%
+      slice(1:6)
+  }
+
+return(top3)
+}
+
+best_models_degano <- check_controls(degano2024_processed) # %>%ungroup()%>% count(better_metric)
+best_models_marty2023 <- check_controls(marty2023_processed)  #%>%ungroup()%>% count(better_metric)
+best_models_marty2022 <- check_controls(marty2022_processed) #%>%ungroup()%>% count(better_metric)
+
+top6_models <- rbind(best_models_degano,best_models_marty2023, best_models_marty2022 )
+top6_models %>% ungroup() %>%count(model) %>% View()
+
+top6_models %>% group_by(model) %>% summarize(mean_acc = mean(wta_accuracy)) %>% View()
+```
+
+The checks above show that There are three models which are best for all studies (Llama-2-70b-hf, Mixtral-8x7B-Instruct-v0.1,text-davinci-003) and six models which were top of 1 or 2 out of three studies. The models which were chosen for 2 out of 3 studies are Mistral-7B-Instruct-v0.2, Mistral-7B-v0.1, Mixtral-8x7B-v0.1. The top 6 models according to highest accuracy *across studies* are: Llama-2-70b-hf, text-davinci-003, Llama-2-13b-hf, phi-2, Mixtral-8x7B-v0.1, Mixtral-8x7B-Instruct-v0.1.
+The top 6 models with the best by-study performance are chosen:
+
+```{r}
+top6_models <- c("Llama-2-70b-hf", "Mixtral-8x7B-Instruct-v0.1","text-davinci-003", "Mistral-7B-Instruct-v0.2", "Mistral-7B-v0.1", "Mixtral-8x7B-v0.1")
+degano_top6 <- degano2024_processed %>%
+  filter(model %in% top6_models)
+marty2023_top6 <- marty2023_processed %>%
+  filter(model %in% top6_models)
+marty2022_top6 <- marty2022_processed %>%
+  filter(model %in% top6_models)
+#degano_top6 %>% write_csv("../../results/03_tidy/deganoetal2024_tidy_top6models.csv")
+#marty2023_top6 %>% write_csv("../../results/03_tidy/martyetal2023_tidy_top6models.csv")
+#marty2022_top6 %>% write_csv("../../results/03_tidy/martyetal2023_tidy_top6models.csv")
+```
