@@ -207,9 +207,13 @@ Based on the analyses above, the following turns out: For all studies, across ex
 Therefore, we subset the data to these results only. The tidy data frames can be found under results/03_tidy. The also only contain WTA predictions now. 
 ```{r, echo=FALSE}
 degano_filtered <- degano2024_processed %>%
-  filter(( (model == "text-davinci-003")) | 
-           ((model == "Llama-2-70b-hf")) |
-           ((model == "Llama-2-13b-hf")) 
+  filter( ((Experiment == "Exp_1") & (model == "phi-2")) | 
+          ((Experiment == "Exp_1") & (model == "Llama-2-13b-hf")) |
+            ((Experiment == "Exp_2") & (model == "phi-2")) | 
+          ((Experiment == "Exp_2") & (model == "Llama-2-13b-hf")) |
+            ((Experiment == "Exp_3") & (model == "text-davinci-003")) | 
+          ((Experiment == "Exp_3") & (model == "Mixtral-8x7B-Instruct-v0.1")) |
+           ((model == "Llama-2-70b-hf"))
            ) %>% select(-norm_factor, -prob_good, -prob_bad, -chosen_response_llh)
 #degano_filtered %>% write_csv("../../results/03_tidy/deganoetal2024_tidy.csv")
 
