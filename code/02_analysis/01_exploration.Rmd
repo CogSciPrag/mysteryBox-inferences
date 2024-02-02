@@ -49,7 +49,6 @@ read_and_save_model_q <- function(p) {
 degano2024 <- bind_rows(map(results_paths_degano2024, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
 marty2023 <- bind_rows(map(results_paths_marty2023, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
 marty2022 <- bind_rows(map(results_paths_marty2022, read_and_save_model)) #%>% filter(model != "Mistral-7B-Instruct-v0.2")
-
 ```
 
 # Analysis
@@ -217,8 +216,12 @@ controls_all_wide_byStudy <- controls_all %>% select(-item_prob_accuracy, -bette
 controls_all_wide_byStudy <- controls_all_wide_byStudy %>%
   mutate(average_accuracy = 1/3*(`Deganoetal_2024`+ `Martyetal_2023`+ `Martyetal_2022`))
 
+controls_all_wide_byModel <- controls_all %>% select(-item_prob_accuracy, -better_metric) %>%
+  mutate(wta_accuracy = round(wta_accuracy, 2)) %>%
+  pivot_wider(names_from = c(model), values_from = wta_accuracy)
 #controls_all_wide %>% write_csv("../../results/02_processed_all/control_acc_all.csv")
 #controls_all_wide_byStudy %>% write_csv("../../results/02_processed_all/control_acc_byStudy.csv")
+#controls_all_wide_byModel %>% write_csv("../../results/02_processed_all/control_acc_byModel.csv")
 ```
 
 DEPRECATED: 

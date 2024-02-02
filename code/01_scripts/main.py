@@ -49,25 +49,6 @@ def main(
 
     if "falcon" in model_name:
             tokenizer.bos_token_id = tokenizer.eos_token_id
-            # sanity check
-            pipeline = transformers.pipeline(
-                "text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                torch_dtype=torch.bfloat16,
-                trust_remote_code=True,
-                device_map="auto",
-            )
-            sequences = pipeline(
-            "Girafatron is obsessed with giraffes,",
-                max_length=200,
-                do_sample=True,
-                top_k=10,
-                num_return_sequences=1,
-                eos_token_id=tokenizer.eos_token_id,
-                return_tensors=True,
-            )
-            print("Pipeline sequences ", sequences)
 
     # read the study items
     data = pd.read_csv(
@@ -82,7 +63,6 @@ def main(
         item_template = f.read()
 
     # subset to desired experiment
-    # TODO for running on the server, script should iterate over all expts automatically
     if experiment_name != "":
         data = data[data["Experiment"] == experiment_name]
     
@@ -105,20 +85,15 @@ def main(
         ]
         # join to a string
         few_shot_items_formatted = "\n\n".join(few_shot_items)
-        #print("Few shot formatted example items")
-        #pprint(few_shot_items_formatted)
-
+        
         # format critical trial
         trial_formatted = format_item(row, item_template)
-        #print("Formatted critical trial")
-        #pprint(trial_formatted)
+        
         # construct overall prompt
         prompt = instructions.format(
             few_shot_trials=few_shot_items_formatted,
             critical_trial=trial_formatted,
         )
-        # print("Overall prompt ")
-        #pprint(prompt)
 
         # get log prob of answer options
         if "davinci" in model_name:
@@ -159,7 +134,7 @@ def main(
             pd.DataFrame(output, index=[i])],
             axis=1
         )
-        # pprint(results_df)
+
 
         if os.path.exists(out_name):
             results_df.to_csv(

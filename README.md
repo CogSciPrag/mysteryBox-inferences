@@ -6,6 +6,7 @@ The repository is structured in the following way:
 
 * `code`: this directory contains Python scripts and utilities for eliciting the LLM results and the scripts for analysing the data and testing it against theoretical predictions / human data.
   * `01_scripts`: LLM scripts
+    * `hf_scores.py`: script containing retrieval of log probabilities for given continuations of given sentences for various HuggingFace models (Mistral, Mixtral, Pythia, Phi-1, Falcon).
     * `main.py`: entrypoint script for running the materials through the LLM. LLM selection as well as study and experiment selection can be passed as cmd arguments.
     * `llama_scores.py`: script containing retrieval of log probabilities for given continuations of given sentences. Accesses HuggingFace verion of Llama-2 (all variants).
     * [deprecated] `openai_scores.py`: script retrieving log probabilities of given sentences from OpenAI API. Note: The respective API endpoint was discontinued.

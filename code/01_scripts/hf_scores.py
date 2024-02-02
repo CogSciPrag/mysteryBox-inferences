@@ -38,8 +38,7 @@ def getLogProbContinuation(
         # split the last continuation sentence from the overall prompt
         prompt_separate = "\n".join(initialSequence.split("\n")[:-1])
         completion_separate = initialSequence.split("\n")[-1]
-        print("completion separate ", completion_separate)
-        print("prompt separate ", prompt_separate)
+       
         messages = [
             {"role": "user", "content": prompt_separate},
             {"role": "assistant", "content": completion_separate + continuation}
@@ -66,7 +65,6 @@ def getLogProbContinuation(
         input_ids = torch.tensor(
             [tokenizer.bos_token_id] + raw_input_ids
         ).unsqueeze(0).to("cuda:0")
-        print("Input ids shape for models w/o default BOS token ", input_ids.shape)
         raw_input_ids_prompt = tokenizer.encode(
             initialSequence.strip(),
             add_special_tokens=False
@@ -74,7 +72,7 @@ def getLogProbContinuation(
         input_ids_prompt = torch.tensor(
             [tokenizer.bos_token_id] + raw_input_ids_prompt
         ).unsqueeze(0)
-        print("Input ids promt for models w/o default BOS token ", input_ids_prompt.shape)
+
     else:
 
         # tokenize separately, so as to know the shape of the continuation
@@ -86,55 +84,36 @@ def getLogProbContinuation(
             prompt,
             return_tensors="pt",
         ).input_ids.to("cuda:0")
-    print("input_ids prompt ", input_ids_prompt.shape)
-    print("input ids ", input_ids.shape, input_ids)
-    # print("input ids continuation ", input_ids_continuation.shape, input_ids_continuation)
-    # cut off the first token of the continuation, as it is SOS
-    # input_ids = torch.cat(
-    #     (input_ids_prompt, input_ids_continuation[:, 1:]), 
-    #     -1
-    # ).to("cuda:1") # put input on the first device
-    print("input ids shape ", input_ids.shape, input_ids.dtype)
     # pass through model
     with torch.no_grad():
         outputs = model(
             input_ids,
         )
     # transform logits to probabilities
-    print("shape of logits ", outputs.logits.shape)
     # remove the EOS logit which we aren't interested in
     llama_output_scores = logsoftmax(
         outputs.logits[0][:-1]
     )
-    print("output log probs shape ", llama_output_scores.shape)
     # retreive log probs at token ids
     # transform input_ids to a tensor of shape [n_tokens, 1] for this
     # cut off the sos token so as to get predictions for the actual token conditioned on 
     # preceding context
-    # TODO: check if the other HF models also prepend SOS
     input_ids_probs = input_ids[:, 1:].squeeze().unsqueeze(-1)
-    print("shape of input ids for prob retrieval ", input_ids_probs.shape)
     # retreive at correct token positions
     conditionalLogProbs = torch.gather(
         llama_output_scores, 
         dim=-1, 
         index=input_ids_probs
     ).flatten()
-    print(len(conditionalLogProbs))
-    print("input_ids_prompt  shape", input_ids_prompt.shape)
     # print("input ids continuation without sos :" , input_ids_continuation.shape[-1]-1)
     # slice output to only get scores of the continuation, not the context
     continuationConditionalLogProbs = conditionalLogProbs[
         (input_ids_prompt.shape[-1]-1):
     ]
-    print("Shape of retrieved log probs", continuationConditionalLogProbs.shape)
-    print(continuationConditionalLogProbs)
     # compute continunation log prob
     sentLogProb = torch.sum(continuationConditionalLogProbs).item()
     meanLogProb = torch.mean(continuationConditionalLogProbs).item()
-    print("sent log prob ", sentLogProb)
-    print("mean log prob ", meanLogProb)
-
+    
     return sentLogProb, meanLogProb
             
 
